@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import codecs
 import dataclasses
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from pathlib import Path
 
 import torch
@@ -75,7 +75,9 @@ class InferenceEngine:
         params: SamplingParams | None = None,
         stop_ids: Iterable[int] = DEFAULT_STOP,
         banned_ids: Iterable[int] = (),
+        logits_hook: Callable[[list[int], torch.Tensor], torch.Tensor] | None = None,
     ) -> Iterator[StreamEvent]:
+        """`logits_hook(generated_ids, logits)` may mask logits each step (constrained decoding)."""
         params = params or SamplingParams()
         stop = {int(s) for s in stop_ids}
         banned = self._banned
@@ -96,11 +98,15 @@ class InferenceEngine:
         ids = torch.tensor([list(prompt_ids)], dtype=torch.long, device=self.device)
         logits = self.model(ids, kv_cache=cache).logits[0, -1]
         pos = len(prompt_ids)
+        generated: list[int] = []
 
         for step in range(params.max_new_tokens):
             logits = logits.float().cpu()
             logits[banned] = float("-inf")
+            if logits_hook is not None:
+                logits = logits_hook(generated, logits)
             tok = sample_next(logits, params, gen)
+            generated.append(tok)
             if tok in stop:
                 yield StreamEvent(tok, decoder.decode(b"", final=True), "stop")
                 return
@@ -122,9 +128,10 @@ class InferenceEngine:
     # --- conveniences ----------------------------------------------------
 
     def generate_ids(self, prompt_ids: Sequence[int], params: SamplingParams | None = None,
-                     stop_ids: Iterable[int] = DEFAULT_STOP, banned_ids: Iterable[int] = ()) -> Generation:
+                     stop_ids: Iterable[int] = DEFAULT_STOP, banned_ids: Iterable[int] = (),
+                     logits_hook: Callable[[list[int], torch.Tensor], torch.Tensor] | None = None) -> Generation:
         texts, ids, reason = [], [], "stop"
-        for ev in self.stream(prompt_ids, params, stop_ids, banned_ids):
+        for ev in self.stream(prompt_ids, params, stop_ids, banned_ids, logits_hook):
             texts.append(ev.text)
             if ev.token_id is not None and ev.finish_reason != "stop":
                 ids.append(ev.token_id)

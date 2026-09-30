@@ -2,10 +2,12 @@
 
 Two evaluations over episode files (benchmarks/agentbench_v1/*.jsonl):
 
-1. Decisions (model only, greedy, no retries, no guard): at every gold Arouse turn the
-   model sees the gold history and must produce the next action. Scores:
-   validity, action type, tool, exact arguments, per-skill accuracy, false-completion
-   rate (finish right after a tool error), ask rate on ambiguous requests.
+1. Decisions: at every gold Arouse turn the model sees the gold history and must produce
+   the next action. Two modes:
+     raw    - the model alone: greedy, no constrained decoding, retries, grounding or guard
+     system - the full runtime (copy-constrained decoding, validation retries, grounding, guard)
+   Scores: validity, action type, tool, exact arguments, per-skill accuracy,
+   false-completion rate (finish right after a tool error), ask rate on ambiguous requests.
 
 2. End-to-end (full runtime incl. retries + completion guard) on each episode's first
    request: run against a fresh sandbox; success = same terminal action type as gold AND
@@ -48,13 +50,17 @@ def _pct(n: int, d: int) -> float | None:
     return round(100.0 * n / d, 2) if d else None
 
 
-def eval_decisions(runtime: AgentRuntime, episodes: list[dict[str, Any]], limit: int | None = None) -> dict[str, Any]:
+def eval_decisions(runtime: AgentRuntime, episodes: list[dict[str, Any]], limit: int | None = None,
+                   mode: str = "raw") -> dict[str, Any]:
     c: dict[str, int] = defaultdict(int)
     by_skill: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     by_cat: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     failures: list[dict[str, Any]] = []
-    saved = (runtime.retries, runtime.guard_completion)
-    runtime.retries, runtime.guard_completion = 0, False  # raw model behaviour
+    if mode not in ("raw", "system"):
+        raise ValueError("mode must be raw or system")
+    saved = (runtime.retries, runtime.guard_completion, runtime.constrain_copy)
+    if mode == "raw":
+        runtime.retries, runtime.guard_completion, runtime.constrain_copy = 0, False, False
     try:
         for ep in episodes:
             header = episode_header(ep)
@@ -100,8 +106,9 @@ def eval_decisions(runtime: AgentRuntime, episodes: list[dict[str, Any]], limit:
                     failures.append({"episode": ep["id"], "turn": k, "gold": gold.to_dict(),
                                      "pred": pred.to_dict() if r.valid else None, "raw": r.raw_text[:300]})
     finally:
-        runtime.retries, runtime.guard_completion = saved
+        runtime.retries, runtime.guard_completion, runtime.constrain_copy = saved
     return {
+        "mode": mode,
         "decisions": c["decisions"],
         "decision_accuracy": _pct(c["correct"], c["decisions"]),
         "structured_output_validity": _pct(c["valid"], c["decisions"]),
@@ -176,7 +183,8 @@ def run_benchmark(model_dir: str, bench_file: str, *, decision_limit: int | None
         "benchmark": "arouse-agentbench-v1",
         "file": str(bench_file),
         "model": engine.info(),
-        "decisions": eval_decisions(runtime, eps, decision_limit),
+        "decisions": eval_decisions(runtime, eps, decision_limit, mode="raw"),
+        "decisions_system": eval_decisions(runtime, eps, decision_limit, mode="system"),
         "end_to_end": eval_end_to_end(runtime, eps, e2e_limit),
     }
     report["seconds"] = round(time.perf_counter() - t0, 1)
@@ -185,19 +193,21 @@ def run_benchmark(model_dir: str, bench_file: str, *, decision_limit: int | None
 
 def summary_lines(report: dict[str, Any]) -> list[str]:
     d, e = report["decisions"], report["end_to_end"]
+    ds = report.get("decisions_system", d)
     rows = [
-        ("Decisions evaluated", d["decisions"]),
-        ("Decision accuracy (type + exact tool/args)", d["decision_accuracy"]),
-        ("Structured output validity", d["structured_output_validity"]),
-        ("Action type accuracy", d["action_type_accuracy"]),
-        ("Tool selection accuracy", d["tool_selection_accuracy"]),
-        ("Argument exact-match accuracy", d["argument_exact_accuracy"]),
-        ("Scheduling exact accuracy", d["scheduling_exact_accuracy"]),
-        ("Ask rate on ambiguous requests", d["ask_rate_on_ambiguous"]),
-        ("False completion rate (raw model)", d["false_completion_rate"]),
-        ("End-to-end task success", e["task_success_rate"]),
-        ("End-to-end episodes", e["episodes"]),
+        ("Decisions evaluated", d["decisions"], ds["decisions"]),
+        ("Decision accuracy (type + exact tool/args)", d["decision_accuracy"], ds["decision_accuracy"]),
+        ("Structured output validity", d["structured_output_validity"], ds["structured_output_validity"]),
+        ("Action type accuracy", d["action_type_accuracy"], ds["action_type_accuracy"]),
+        ("Tool selection accuracy", d["tool_selection_accuracy"], ds["tool_selection_accuracy"]),
+        ("Argument exact-match accuracy", d["argument_exact_accuracy"], ds["argument_exact_accuracy"]),
+        ("Scheduling exact accuracy", d["scheduling_exact_accuracy"], ds["scheduling_exact_accuracy"]),
+        ("Ask rate on ambiguous requests", d["ask_rate_on_ambiguous"], ds["ask_rate_on_ambiguous"]),
+        ("False completion rate", d["false_completion_rate"], ds["false_completion_rate"]),
     ]
-    out = [f"{k:<46} {v}{'%' if isinstance(v, float) else ''}" for k, v in rows]
-    out.append("By skill: " + ", ".join(f"{k} {v['accuracy']}% (n={v['n']})" for k, v in d["by_skill"].items()))
+    fmt = lambda v: f"{v}%" if isinstance(v, float) else str(v)  # noqa: E731
+    out = [f"{'metric':<46} {'raw model':>10} {'system':>10}"]
+    out += [f"{k:<46} {fmt(a):>10} {fmt(b):>10}" for k, a, b in rows]
+    out.append(f"{'End-to-end task success (system)':<46} {'':>10} {fmt(e['task_success_rate']):>10}  (n={e['episodes']})")
+    out.append("By skill (raw): " + ", ".join(f"{k} {v['accuracy']}% (n={v['n']})" for k, v in d["by_skill"].items()))
     return out

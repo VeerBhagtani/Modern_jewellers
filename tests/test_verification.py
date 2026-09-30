@@ -117,7 +117,7 @@ def test_current_request_spans_questions_but_not_finished_requests():
 def test_runtime_prefers_grounded_sample(tiny_tokenizer):
     bad = Turn(_create("renew the gym"))
     good = Turn(_create("renew the gym membership"))
-    rt = AgentRuntime(scripted_engine(tiny_tokenizer, [bad, good, Turn(Action.finish("ok"))]), REGISTRY)
+    rt = AgentRuntime(scripted_engine(tiny_tokenizer, [bad, good, Turn(Action.finish("ok"))]), REGISTRY, constrain_copy=False)
     sb = Sandbox(NOW)
     res = rt.run(HEADER, [{"type": "user", "content": "Remind me tomorrow at 8 to renew the gym membership."}], sb.execute)
     assert sb.snapshot()["reminders"][0]["task"] == "renew the gym membership"
@@ -126,13 +126,63 @@ def test_runtime_prefers_grounded_sample(tiny_tokenizer):
 
 def test_runtime_keeps_greedy_when_nothing_is_grounded(tiny_tokenizer):
     bad = Turn(_create("renew the gym"))
-    rt = AgentRuntime(scripted_engine(tiny_tokenizer, [bad] * 7 + [Turn(Action.finish("ok"))]), REGISTRY)
+    rt = AgentRuntime(scripted_engine(tiny_tokenizer, [bad] * 7 + [Turn(Action.finish("ok"))]), REGISTRY, constrain_copy=False)
     res = rt.run(HEADER, [{"type": "user", "content": "Remind me to renew the gym membership."}], Sandbox(NOW).execute)
     assert not res.turns[0].grounded and res.turns[0].attempts == 7
 
 
 def test_raw_mode_skips_grounding(tiny_tokenizer):
     bad = Turn(_create("renew the gym"))
-    rt = AgentRuntime(scripted_engine(tiny_tokenizer, [bad, Turn(_create("x"))]), REGISTRY, retries=0)
+    rt = AgentRuntime(scripted_engine(tiny_tokenizer, [bad, Turn(_create("x"))]), REGISTRY, retries=0, constrain_copy=False)
     r = rt.next_turn(HEADER, [{"type": "user", "content": "Remind me to renew the gym membership."}])
     assert r.turn == bad and r.attempts == 1
+
+
+# --- constrained decoding ----------------------------------------------------------
+
+from datetime import date  # noqa: E402
+
+from arouse.agent.constraints import CopyConstraint, mentioned_dates  # noqa: E402
+
+
+def _allowed_texts(tok, cc, prefix_text):
+    import torch
+
+    ids = tok.encode(prefix_text, allow_special=True)
+    out = cc(ids, torch.zeros(tok.vocab_size))
+    return {tok.id_to_bytes(i).decode("utf-8", "ignore") for i in torch.isfinite(out).nonzero().flatten().tolist()}
+
+
+def test_copy_constraint_only_allows_user_phrases(tiny_tokenizer):
+    evs = [{"type": "user", "content": "Remind me tomorrow at 8 to test the backup generator."}]
+    cc = CopyConstraint(tiny_tokenizer, evs, build_context(NOW))
+    head = '<|tool_call|>{"tool":"scheduler.create","arguments":{"date":"2026-10-01","task":"test the'
+    allowed = _allowed_texts(tiny_tokenizer, cc, head)
+    assert allowed and all(" backup generator.".startswith(p) for p in allowed)  # only the real continuation
+    done = _allowed_texts(tiny_tokenizer, cc, head + ' backup generator')
+    assert any(p.startswith('"') for p in done)  # may close once the phrase is complete
+    assert not any(p.startswith('"') for p in _allowed_texts(tiny_tokenizer, cc, head + " back"))  # not mid-word
+
+
+def test_copy_constraint_inactive_outside_copy_fields(tiny_tokenizer):
+    import torch
+
+    cc = CopyConstraint(tiny_tokenizer, [{"type": "user", "content": "hi"}], build_context(NOW))
+    logits = torch.randn(tiny_tokenizer.vocab_size)
+    ids = tiny_tokenizer.encode('<|plan|>thinking<|finish|>{"result":"', allow_special=True)
+    assert torch.equal(cc(ids, logits), logits)
+
+
+def test_date_constraint(tiny_tokenizer):
+    ctx = build_context(NOW)  # tomorrow = 2026-10-01, next friday = 2026-10-02
+    evs = [{"type": "user", "content": "Remind me on October 20 at 9 to pay rent."}]
+    cc = CopyConstraint(tiny_tokenizer, evs, ctx)
+    assert {"2026-09-30", "2026-10-01", "2026-10-02", "2026-10-20"} <= set(cc.dates)
+    allowed = _allowed_texts(tiny_tokenizer, cc, '<|tool_call|>{"tool":"scheduler.create","arguments":{"date":"2026-10-')
+    assert allowed and all(any(d[8:].startswith(p) for d in cc.dates if d.startswith("2026-10-")) for p in allowed)
+
+
+def test_mentioned_dates():
+    today = date(2026, 9, 30)
+    got = mentioned_dates(["on October 5", "the 3rd of Jan", "12 Sept", "Feb 30", "may I ask"], today)
+    assert got == {"2026-10-05", "2027-01-03", "2027-09-12"}

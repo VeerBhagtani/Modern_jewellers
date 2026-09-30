@@ -4,9 +4,9 @@ Defence in depth against unreliable output:
   1. token mask: the model cannot emit input-only tokens (no forged tool results)
   2. protocol validation: every turn must parse into exactly one schema-valid action,
      tool calls must match the tool's argument schema; otherwise resample (bounded)
-  3. grounding: free-text arguments (reminder task, note text, file path) must come
-     from the conversation; ungrounded calls are resampled (greedy result kept if no
-     sample is grounded)
+  3. copy-constrained decoding + grounding: free-text arguments (reminder task, note
+     text, file path) can only be copied from the conversation; anything still
+     ungrounded is resampled (greedy result kept if no sample is grounded)
   4. completion guard: `finish` right after a failed tool call (with no success since)
      is converted to `fail`, so a false "Done." never reaches the user
   5. step limit: at most `max_tool_calls` tool calls per user message
@@ -18,6 +18,7 @@ import dataclasses
 from collections.abc import Callable
 from typing import Any
 
+from arouse.agent.constraints import CopyConstraint
 from arouse.agent.episode import Header, encode_prompt, turn_event
 from arouse.agent.grounding import grounding_issue
 from arouse.inference import InferenceEngine, SamplingParams
@@ -65,6 +66,7 @@ class AgentRuntime:
         retries: int = 2,
         guard_completion: bool = True,
         grounding_samples: int = 4,
+        constrain_copy: bool = True,
     ) -> None:
         self.engine = engine
         self.registry = registry
@@ -73,6 +75,7 @@ class AgentRuntime:
         self.retries = retries
         self.guard_completion = guard_completion
         self.grounding_samples = grounding_samples
+        self.constrain_copy = constrain_copy
 
     def _fit(self, header: Header, events: list[dict[str, Any]]) -> list[int]:
         """Prompt ids; drops the oldest whole user exchanges if the context is too long."""
@@ -88,10 +91,10 @@ class AgentRuntime:
                 raise ProtocolError(f"conversation needs {len(ids)} tokens; the model allows {budget}")
             evs = evs[nxt:]
 
-    def _sample(self, prompt: list[int], attempt: int) -> tuple[Turn | None, str]:
+    def _sample(self, prompt: list[int], attempt: int, hook: CopyConstraint | None) -> tuple[Turn | None, str]:
         params = SamplingParams(max_new_tokens=self.max_new_tokens, temperature=0.0 if attempt == 0 else 0.7,
                                 top_p=0.95, seed=attempt)
-        gen = self.engine.generate_ids(prompt, params, stop_ids=[Special.END], banned_ids=[Special.EOS])
+        gen = self.engine.generate_ids(prompt, params, stop_ids=[Special.END], banned_ids=[Special.EOS], logits_hook=hook)
         try:
             turn = decode_turn(self.engine.tokenizer, gen.token_ids)
             if turn.action.type == "tool_call":
@@ -102,12 +105,13 @@ class AgentRuntime:
 
     def next_turn(self, header: Header, events: list[dict[str, Any]]) -> TurnResult:
         prompt = self._fit(header, events)
+        hook = CopyConstraint(self.engine.tokenizer, events, header.context) if self.constrain_copy else None
         raw = ""
         first_valid: TurnResult | None = None
         attempt = 0
         # Valid-output retries, then extra samples only while looking for a grounded tool call.
         while attempt < 1 + self.retries + (self.grounding_samples if first_valid else 0):
-            turn, raw = self._sample(prompt, attempt)
+            turn, raw = self._sample(prompt, attempt, hook)
             attempt += 1
             if turn is None:
                 continue
