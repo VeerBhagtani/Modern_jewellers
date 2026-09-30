@@ -129,7 +129,7 @@ def _train(a: argparse.Namespace) -> int:
     cfg = TrainingConfig.from_yaml(a.config)
     if a.max_steps:
         cfg = cfg.replace(max_steps=a.max_steps)
-    Trainer(cfg).train()
+    Trainer(cfg, log=lambda msg: print(msg, flush=True)).train()
     return 0
 
 

@@ -5,13 +5,19 @@ Each milestone is: explain → implement → test → run tests → fix → repo
 | # | Milestone | Status |
 |---|---|---|
 | 1 | Project structure, config system, tokenizer design + implementation, tiny dataset, tests, docs | ✅ done |
-| 2 | Transformer in PyTorch (embeddings, RoPE, attention + causal mask, SwiGLU, RMSNorm, LM head, loss); param count must equal `ModelConfig.parameter_counts()` | ✅ done |
-| 2b | *(Pulled forward on request.)* Inference core (KV cache, sampling, streaming, stop tokens, token safety mask), `arouse chat`, `arouse.generate()`, local API + chat UI | ✅ done |
-| 3 | Dataset pipeline (sources + provenance, cleaning, dedup, mixing weights, packing, splits) + resumable pretraining (AMP, grad accumulation, LR schedule, checkpoints) | next |
-| 4 | Arouse Action Protocol: versioned JSON schemas, validator, `<|X|>body` ↔ `{"type":X,…}` codec, constrained decoding | |
-| 5 | Inference: structured-output mode (constrained JSON actions), batching, preallocated KV cache | core done in 2b |
-| 6 | Agent runtime: task state, memory injection, verification, trajectory format + agent SFT data (scheduling, errors, clarification) | |
-| 7 | Arouse AgentBench (≥500 cases, held-out split) + `/v1/agent` endpoint | API core done in 2b |
+| 2 | Transformer in PyTorch (RoPE, GQA, SwiGLU, RMSNorm, KV cache); param count equals config | ✅ done |
+| 2b | Inference core (sampling, streaming, token safety mask), `arouse chat`, `arouse.generate()`, local API + chat UI | ✅ done |
+| 3 | Dataset pipeline (provenance, cleaning, dedup, mixing, packing, splits) + resumable training | ✅ done |
+| 4 | Arouse Action Protocol v1: schemas, validation, canonical JSON, token codec | ✅ done |
+| 5 | Structured-output mode: protocol validation + bounded resampling (grammar-constrained decoding: future) | ✅ done |
+| 6 | Agent runtime (context, sandbox tools, task state, verification guard), agent data, agent model training | ✅ done |
+| 7 | Arouse AgentBench v1 (held-out split) + `/v1/agent` API for MDA | ✅ done |
+
+## Next
+
+- A larger model (the 110M v0.1 config) on a GPU, with real, provenance-tracked pretraining text plus agent SFT data.
+- More tools and tool-set variation (so the model conditions on `<|tools|>`), plus memory retrieval.
+- Grammar-constrained JSON decoding, and paraphrase robustness (typos, code-mixed Hindi/English).
 
 ## Hardware note
 
