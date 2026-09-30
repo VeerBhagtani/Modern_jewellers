@@ -5,8 +5,9 @@ Defence in depth against unreliable output:
   2. protocol validation: every turn must parse into exactly one schema-valid action,
      tool calls must match the tool's argument schema; otherwise resample (bounded)
   3. copy-constrained decoding + grounding: free-text arguments (reminder task, note
-     text, file path) can only be copied from the conversation; anything still
-     ungrounded is resampled (greedy result kept if no sample is grounded)
+     text, file path) can only be copied from the conversation; final answers may only
+     use Arouse's response vocabulary plus words from the conversation / tool results;
+     anything ungrounded is resampled (greedy result kept if no sample is grounded)
   4. completion guard: `finish` right after a failed tool call (with no success since)
      is converted to `fail`, so a false "Done." never reaches the user
   5. step limit: at most `max_tool_calls` tool calls per user message
@@ -20,7 +21,7 @@ from typing import Any
 
 from arouse.agent.constraints import CopyConstraint
 from arouse.agent.episode import Header, encode_prompt, turn_event
-from arouse.agent.grounding import grounding_issue
+from arouse.agent.grounding import answer_issue, grounding_issue
 from arouse.inference import InferenceEngine, SamplingParams
 from arouse.protocol import Action, ProtocolError, ToolRegistry, Turn, decode_turn
 from arouse.tokenizer import Special
@@ -116,7 +117,7 @@ class AgentRuntime:
             if turn is None:
                 continue
             result = TurnResult(turn, attempt, raw, True)
-            if self.retries == 0 or grounding_issue(turn.action, events) is None:
+            if self.retries == 0 or (grounding_issue(turn.action, events) or answer_issue(turn.action, events)) is None:
                 return self._guard(result, events)
             if first_valid is None:
                 first_valid = dataclasses.replace(result, grounded=False)

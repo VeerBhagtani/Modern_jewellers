@@ -1,0 +1,10 @@
+{
+  "format": "arouse-model",
+  "format_version": 1,
+  "name": "arouse-agent-s",
+  "num_parameters": 5475584,
+  "tokenizer_fingerprint": "6b6a9b5f8ac402c8",
+  "trained": true,
+  "train_steps": 2000,
+  "notes": "arouse-agent-s: 2000 steps on agent_v1 + 2000 steps fine-tune on agent_v2 (CPU). Synthetic agent data only."
+}

@@ -196,3 +196,21 @@ def test_copy_constraint_stops_and_schema_order(tiny_tokenizer):
     assert CopyConstraint.next_after_close("task", '{"tool":"scheduler.create","arguments":{"date":"x","task":"') == ","
     assert CopyConstraint.next_after_close("task", '{"tool":"scheduler.create","arguments":{"in_minutes":5,"task":"') == "}"
     assert CopyConstraint.next_after_close("text", '{"tool":"notes.create","arguments":{"text":"') == "}"
+
+
+def test_answer_guard_catches_invented_words_but_never_gold_answers():
+    from arouse.agent.grounding import answer_issue
+
+    res = {"success": True, "count": 1, "reminders": [{"task_id": "r-2", "task": "pay the staff", "next_run": "2026-10-05T09:00"}]}
+    evs = [{"type": "user", "content": "What reminders do I have?"},
+           {"type": "arouse", "turn": {"action": {"type": "tool_call", "tool": "scheduler.list", "arguments": {}}}},
+           {"type": "tool_result", "content": res}]
+    assert answer_issue(Action.finish("You have 1 reminder: pay the staff on 2026-10-05 at 09:00."), evs) is None
+    assert "cow" in answer_issue(Action.finish("You have 1 reminder: call the cow on 2026-10-05 at 09:00."), evs)
+    assert answer_issue(Action.finish("Reminder set: x on 2027-01-01 at 09:00."), evs) is not None  # date not seen
+    flagged = 0
+    for ep in generate(800, seed=779) + generate(200, seed=780, split="test"):
+        for i, ev in enumerate(ep["events"]):
+            if ev["type"] == "arouse":
+                flagged += answer_issue(turn_from_event(ev).action, ep["events"][:i]) is not None
+    assert flagged == 0
