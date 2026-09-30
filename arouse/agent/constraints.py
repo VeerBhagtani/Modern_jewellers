@@ -31,6 +31,15 @@ _DATE_PATTERNS = [
     re.compile(rf"\b({_MONTH_RE})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?\b", re.I),  # October 5
     re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+(?:of\s+)?({_MONTH_RE})\b", re.I),  # 5 October / 5th of October
 ]
+# Where a copied value must stop: sentence punctuation (all fields) and, for reminder
+# tasks, the start of a time/date phrase (" at 5", " in 3 hours", " on Sunday", " every ...").
+_STOP_ALL = re.compile(r"[.?!;]")
+_DAYS = "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
+_STOP_TASK = re.compile(
+    rf"[,:]|\s(?:at|in|on|by|after|from|before)\s+(?:\d|an?\s|half|the\s\d|{_DAYS}|noon|midnight)"
+    rf"|\s(?:tomorrow|today|tonight|every|each|daily|weekly|monthly|next|this)\b|\s(?:{_DAYS})\b",
+    re.I,
+)
 _CLOSE = re.compile(r'^"([,}\]].*)?$', re.S)  # closes the string; the rest is ordinary JSON structure
 _VOCAB: dict[str, tuple[dict[str, list[int]], list[int], int]] = {}
 
@@ -86,6 +95,7 @@ class CopyConstraint:
     def __init__(self, tok: ArouseTokenizer, events: list[dict[str, Any]], context: dict[str, Any] | None = None) -> None:
         self.tok = tok
         self.pieces, self.closing, self.maxlen = _vocab(tok)
+        self.closer_text = {t: tok.id_to_bytes(t).decode("utf-8") for t in self.closing}
         req = current_request(events)
         said = [ev["content"] for ev in req if ev["type"] == "user"]
         listed = [f for ev in req if ev["type"] == "tool_result" for f in ev["content"].get("files", [])]
@@ -97,8 +107,8 @@ class CopyConstraint:
             dates |= mentioned_dates(said, today)
         self.dates = sorted(dates)
 
-    def open_field(self, generated: list[int]) -> tuple[str, str] | None:
-        """(field, partial value) if the model is currently inside a copy-field string."""
+    def open_field(self, generated: list[int]) -> tuple[str, str, str] | None:
+        """(field, partial value, body so far) if the model is inside a constrained string."""
         if Special.TOOL_CALL not in generated:
             return None
         start = len(generated) - 1 - generated[::-1].index(Special.TOOL_CALL)
@@ -106,7 +116,17 @@ class CopyConstraint:
         m = _OPEN.search(body)
         if not m or "\\" in m.group(2):
             return None
-        return m.group(1), m.group(2)
+        return m.group(1), m.group(2), body
+
+    @staticmethod
+    def next_after_close(field: str, body: str) -> str:
+        """JSON character that must follow the closing quote (keys are canonical-sorted:
+        date, in_minutes, repeat, task, time)."""
+        if field == "date":
+            return ","
+        if field == "task" and '"scheduler.create"' in body and '"in_minutes"' not in body:
+            return ","  # "time" always follows "task" unless the reminder is relative
+        return "}"
 
     def continuations(self, field: str, partial: str) -> list[str]:
         """What may follow `partial` in each source (the value must start at a word start)."""
@@ -123,7 +143,18 @@ class CopyConstraint:
                     if i == 0 or not src[i - 1].isalnum():
                         starts.append(i)
                     i = src.find(partial, i + 1)
-            out += [src[i + len(partial):] for i in starts]
+            if field == "task" and not partial:
+                starts = [i for i in starts if not src[i].isdigit()]  # tasks start with a word, not "40 PM"
+            for i in starts:
+                rest = src[i + len(partial):]
+                stops = [m.start() for p in ((_STOP_ALL, _STOP_TASK) if field == "task" else (_STOP_ALL,))
+                         if (m := p.search(src[i:]))]  # measured from the value's start
+                if stops:
+                    cut = min(stops) - len(partial)
+                    if cut <= 0:
+                        continue
+                    rest = rest[:cut]
+                out.append(rest)
         return out
 
     def complete(self, field: str, value: str) -> bool:
@@ -139,13 +170,15 @@ class CopyConstraint:
         state = self.open_field(generated)
         if state is None or (state[0] == "date" and not self.dates) or (state[0] != "date" and not self.sources[state[0]]):
             return logits
-        field, partial = state
+        field, partial, body = state
         allowed: set[int] = set()
         for rest in self.continuations(field, partial):
             for n in range(1, min(len(rest), self.maxlen) + 1):
                 allowed.update(self.pieces.get(rest[:n], ()))
         if self.complete(field, partial):
-            allowed.update(self.closing)
+            need = self.next_after_close(field, body)
+            closers = [t for t in self.closing if self.closer_text[t][1:2] == need]
+            allowed.update(closers or [t for t in self.closing if self.closer_text[t] == '"'])
         allowed = {t for t in allowed if torch.isfinite(logits[t])}
         if not allowed:
             return logits  # never dead-end: fall back to the model's own choice

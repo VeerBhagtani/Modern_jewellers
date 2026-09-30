@@ -186,3 +186,13 @@ def test_mentioned_dates():
     today = date(2026, 9, 30)
     got = mentioned_dates(["on October 5", "the 3rd of Jan", "12 Sept", "Feb 30", "may I ask"], today)
     assert got == {"2026-10-05", "2027-01-03", "2027-09-12"}
+
+
+def test_copy_constraint_stops_and_schema_order(tiny_tokenizer):
+    evs = [{"type": "user", "content": "Give me a reminder to renew the gym membership in 3 hours."}]
+    cc = CopyConstraint(tiny_tokenizer, evs, build_context(NOW))
+    assert cc.continuations("task", "renew the gym") == [" membership"]  # cannot run into " in 3 hours"
+    assert all(not c.startswith("3") for c in cc.continuations("task", ""))  # tasks never start with a digit
+    assert CopyConstraint.next_after_close("task", '{"tool":"scheduler.create","arguments":{"date":"x","task":"') == ","
+    assert CopyConstraint.next_after_close("task", '{"tool":"scheduler.create","arguments":{"in_minutes":5,"task":"') == "}"
+    assert CopyConstraint.next_after_close("text", '{"tool":"notes.create","arguments":{"text":"') == "}"
