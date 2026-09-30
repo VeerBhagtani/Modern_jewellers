@@ -18,7 +18,7 @@ CHAT = {"messages": [{"role": "user", "content": "hi"}], "max_tokens": 6, "seed"
 @pytest.fixture(scope="module")
 def server(tiny_tokenizer):
     torch.manual_seed(0)
-    engine = InferenceEngine(ArouseTransformer(get_preset("arouse-tiny")), tiny_tokenizer)
+    engine = InferenceEngine(ArouseTransformer(get_preset("arouse-tiny").replace(context_length=1024)), tiny_tokenizer)
     srv = make_server(engine, port=0)
     t = threading.Thread(target=srv.serve_forever, daemon=True)
     t.start()
@@ -45,7 +45,7 @@ def sse_events(text):
 def test_index_page(server):
     status, ctype, body = call(server[0], "/")
     assert status == 200 and ctype.startswith("text/html")
-    assert "<title>Arouse Chat</title>" in body and "/v1/chat" in body
+    assert "<title>Arouse Chat</title>" in body and "/v1/agent/run" in body
 
 
 def test_health(server):
@@ -90,10 +90,16 @@ def test_generate(server):
         ("/v1/chat", {**CHAT, "temperature": -1}, None, 400, "temperature"),
         ("/v1/chat", {**CHAT, "temprature": 1}, None, 400, "unknown fields"),
         ("/v1/chat", {**CHAT, "stream": "yes"}, None, 400, "stream"),
-        ("/v1/chat", {"messages": [{"role": "user", "content": "word " * 400}]}, None, 400, "tokens"),
+        ("/v1/chat", {"messages": [{"role": "user", "content": "word " * 1500}]}, None, 400, "tokens"),
+        ("/v1/agent/run", {"message": "word " * 390}, None, 400, "too long for this model"),
         ("/v1/generate", {"prompt": ""}, None, 400, "prompt"),
         ("/v1/generate", {"prompt": "x", "allow_special": "no"}, None, 400, "allow_special"),
-        ("/v1/agent", {}, None, 501, "Milestone 6"),
+        ("/v1/agent", {}, None, 400, "events"),
+        ("/v1/agent", {"events": [{"type": "robot"}]}, None, 400, "type must be"),
+        ("/v1/agent", {"events": [{"type": "user", "content": "x"}], "tools": ["shell.run"]}, None, 400, "unknown tools"),
+        ("/v1/agent", {"events": [{"type": "user", "content": "x"}], "extra": 1}, None, 400, "unknown fields"),
+        ("/v1/agent/run", {}, None, 400, "message"),
+        ("/v1/agent/run", {"message": "hi", "session_id": "../x"}, None, 400, "alphanumeric"),
         ("/v1/nope", {}, None, 404, "no route"),
     ],
 )
@@ -143,3 +149,24 @@ def test_client_disconnect_releases_model(server):
     conn.close()
     status, _, _ = call(base, "/v1/chat", CHAT)  # would deadlock if the lock leaked
     assert status == 200
+
+
+def test_agent_next_action_returns_protocol_json(server):
+    body = {"events": [{"type": "user", "content": "Remind me tomorrow at 8 AM to check sales."}]}
+    status, _, text = call(server[0], "/v1/agent", body)
+    r = json.loads(text)
+    assert status == 200 and r["protocol"] == "arouse-action/1"
+    assert r["action"]["type"] in ("tool_call", "ask_user", "finish", "fail")
+    assert isinstance(r["valid"], bool) and r["attempts"] >= 1  # random weights: usually an honest fail
+
+
+def test_agent_run_session_lifecycle(server):
+    status, _, text = call(server[0], "/v1/agent/run", {"message": "hi"})
+    r = json.loads(text)
+    assert status == 200 and r["session_id"] and r["final"]["type"] in ("tool_call", "ask_user", "finish", "fail")
+    assert r["final"]["type"] != "tool_call"  # runs until a terminal action
+    assert set(r["state"]) == {"reminders", "notes"}
+    status, _, text = call(server[0], "/v1/agent/run", {"message": "again", "session_id": r["session_id"]})
+    assert status == 200 and json.loads(text)["session_id"] == r["session_id"]
+    _, _, text = call(server[0], "/v1/agent/reset", {"session_id": r["session_id"]})
+    assert json.loads(text) == {"reset": True}

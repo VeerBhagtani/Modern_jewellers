@@ -1,0 +1,11 @@
+# Tokenizer for the agent model (vocab matches configs/model_agent_s.yaml).
+vocab_size: 4096
+corpus:
+  - artifacts/datasets/agent_v1/train.jsonl
+  - datasets/tokenizer_tiny/general.txt
+  - datasets/tokenizer_tiny/code.txt
+  - datasets/tokenizer_tiny/structured.txt
+  - datasets/tokenizer_tiny/multilingual.txt
+output_dir: artifacts/tokenizers/arouse-agent
+min_frequency: 2
+max_bytes: 40000000

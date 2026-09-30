@@ -10,11 +10,55 @@ The server uses only the Python standard library. It binds to localhost by defau
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/` | Chat UI |
+| GET | `/` | Chat UI (agent mode) |
 | GET | `/v1/health` | Status and model info |
-| POST | `/v1/chat` | Chat completion |
+| POST | `/v1/agent` | **Next structured action** for a conversation the client manages (for MDA) |
+| POST | `/v1/agent/run` | Local demo: server session plus sandbox tools; runs until a terminal action |
+| POST | `/v1/agent/reset` | Forget a demo session |
+| POST | `/v1/chat` | Raw chat completion (plain text, no tools) |
 | POST | `/v1/generate` | Raw text completion |
-| POST | `/v1/agent` | `501` until Milestone 6 (structured actions) |
+
+## Agent endpoints
+
+### `POST /v1/agent`: MDA integration (stateless)
+
+MDA owns the conversation and executes tools itself. Each call returns exactly one validated action.
+
+```json
+{"events": [
+   {"type": "user", "content": "Every Monday at 9 AM remind me to check sales."}
+ ],
+ "context": {"now": "2026-09-30T19:21", "...": "optional, built from server time if omitted"},
+ "tools": ["scheduler.create", "scheduler.list"],
+ "memory": "optional retrieved memory text",
+ "state": {"optional": "task state object"}}
+```
+
+```json
+{"protocol": "arouse-action/1",
+ "plan": "Recurring reminder every Monday at 09:00.",
+ "action": {"type": "tool_call", "tool": "scheduler.create",
+            "arguments": {"repeat": {"by_day": ["MO"], "freq": "weekly"}, "task": "check sales", "time": "09:00"}},
+ "valid": true, "attempts": 1, "guarded": false}
+```
+
+After executing the call, MDA sends the same request again with two more events appended:
+- the turn it just received: `{"type": "arouse", "turn": {...}}`
+- the observation: `{"type": "tool_result", "content": {...}}` or `{"type": "tool_error", "content": {...}}`
+
+Stop when the returned action is `ask_user`, `finish` or `fail`.
+
+In the response:
+- `valid: false` means the model produced no valid action. The action is then an honest `fail`.
+- `guarded: true` means a `finish` that followed a failed tool call was rewritten to `fail`.
+
+### `POST /v1/agent/run`: built-in sandbox (chat UI)
+
+Request: `{"message": "...", "session_id": "optional"}`.
+
+Response: `{"session_id", "final": action, "steps": [turns and observations], "valid", "guarded", "state": {"reminders", "notes"}}`.
+
+The sandbox is in memory, with a few demo files (`sales.csv`, `milk_records.csv`, `notes.txt`, `staff.csv`).
 
 ### Sampling fields (chat and generate)
 
@@ -64,7 +108,7 @@ Errors look like `{"error": {"status": 400, "message": "…"}}`.
 - `400`: bad input
 - `404`: unknown route
 - `413`: body over 1 MB
-- `501`: not implemented yet
+- `500`: internal error (always answered as JSON)
 
 ## Safety guarantees (tested)
 

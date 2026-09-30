@@ -1,0 +1,16 @@
+# Arouse agent-s: small agent-specialised model trainable on CPU (~5.3M params).
+name: arouse-agent-s
+vocab_size: 3328          # tokenizer arouse-agent has 3150 tokens; padded to a multiple of 256
+context_length: 768       # covers 99.6% of agent_v1 episodes
+d_model: 256
+n_layers: 6
+n_heads: 8
+n_kv_heads: 4
+ffn_hidden_size: null     # -> 704
+ffn_multiple_of: 64
+rope_theta: 10000.0
+norm_eps: 1.0e-05
+dropout: 0.0
+bias: false
+tie_embeddings: true
+init_std: 0.02

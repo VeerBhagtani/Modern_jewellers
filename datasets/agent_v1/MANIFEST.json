@@ -1,0 +1,27 @@
+{
+  "dataset": "agent_v1",
+  "external_sources": [],
+  "files": [
+    {
+      "file": "artifacts/datasets/agent_v1/train.jsonl",
+      "episodes": 60000,
+      "sha256": "81de1901ba47a77006e3f934efa92de57410aa14442c65f41feb579f52c29f23",
+      "origin": "arouse/agent/synth.py split=train seed=101",
+      "license": "project-owned"
+    },
+    {
+      "file": "benchmarks/agentbench_v1/test.jsonl",
+      "episodes": 400,
+      "sha256": "eefc6544d52f4be8c523fe39a22329d2cb00b2bdf69da801bb73d9b9f495823f",
+      "origin": "arouse/agent/synth.py split=test seed=9001 (held-out tasks, facts, files, templates)",
+      "license": "project-owned"
+    },
+    {
+      "file": "benchmarks/agentbench_v1/in_distribution.jsonl",
+      "episodes": 150,
+      "sha256": "26833e7ebd9c24a07079522b700309c0a973b5915e68a3e67785856edb292b77",
+      "origin": "arouse/agent/synth.py split=train seed=777",
+      "license": "project-owned"
+    }
+  ]
+}

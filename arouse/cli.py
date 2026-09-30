@@ -4,6 +4,8 @@
     arouse model init --config configs/model_tiny.yaml --tokenizer DIR --out DIR   (random weights)
     arouse data prepare --config configs/data_tiny.yaml
     arouse train --config configs/train_tiny.yaml [--max-steps N]   (auto-resumes)
+    arouse agent --model DIR                    terminal agent with sandbox tools
+    arouse bench --model DIR --file benchmarks/agentbench_v1/test.jsonl [--out FILE]
     arouse chat  --model DIR                    terminal chat (streaming)
     arouse serve --model DIR [--port 8000]      local API + chat UI at http://127.0.0.1:8000
     arouse tokenizer train --config configs/tokenizer_tiny.yaml
@@ -131,6 +133,56 @@ def _train(a: argparse.Namespace) -> int:
     return 0
 
 
+def _agent(a: argparse.Namespace) -> int:
+    from datetime import datetime
+
+    from arouse.agent.context import build_context
+    from arouse.agent.episode import Header
+    from arouse.agent.runtime import AgentRuntime
+    from arouse.agent.tools import REGISTRY, Sandbox
+    from arouse.api.agent_service import DEMO_FILES
+
+    engine = _load_engine(a.model)
+    runtime = AgentRuntime(engine, REGISTRY)
+    sandbox = Sandbox(datetime.now().replace(second=0, microsecond=0), DEMO_FILES)
+    events: list[dict] = []
+    print(f"Arouse agent - {engine.info()['name']}. Sandbox files: {', '.join(sorted(DEMO_FILES))}. Ctrl+D to exit.")
+    while True:
+        try:
+            text = input("\nyou> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+        if not text:
+            continue
+        now = datetime.now().replace(second=0, microsecond=0)
+        sandbox.now = now
+        events.append({"type": "user", "content": text})
+        res = runtime.run(Header(context=build_context(now, "local"), tools=REGISTRY.names()), events, sandbox.execute)
+        events.extend(res.events)
+        for ev in res.events:
+            if ev["type"] == "arouse" and ev["turn"]["action"]["type"] == "tool_call":
+                act = ev["turn"]["action"]
+                print(f"  -> {act['tool']} {json.dumps(act['arguments'])}")
+            elif ev["type"] in ("tool_result", "tool_error"):
+                print(f"  <- {ev['type']}: {json.dumps(ev['content'])[:160]}")
+        f = res.final
+        print(f"arouse> {f.result or f.question or f.error}" + ("" if f.type != "fail" else "  [failed]"))
+
+
+def _bench(a: argparse.Namespace) -> int:
+    from arouse.evaluation.agentbench import run_benchmark, summary_lines
+
+    report = run_benchmark(a.model, a.file, decision_limit=a.limit or None, e2e_limit=a.e2e_limit or None)
+    for line in summary_lines(report):
+        print(line)
+    if a.out:
+        Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(a.out).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        print(f"report -> {a.out}")
+    return 0
+
+
 def _add_sampling_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--max-tokens", type=int, default=200)
     p.add_argument("--temperature", type=float, default=0.8)
@@ -209,6 +261,18 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--config", required=True)
     train.add_argument("--max-steps", type=int, default=0)
     train.set_defaults(fn=_train)
+
+    agent = sub.add_parser("agent", help="terminal agent (runs tools in a local sandbox)")
+    agent.add_argument("--model", required=True, help="model directory")
+    agent.set_defaults(fn=_agent)
+
+    bench = sub.add_parser("bench", help="run Arouse AgentBench")
+    bench.add_argument("--model", required=True)
+    bench.add_argument("--file", default="benchmarks/agentbench_v1/test.jsonl")
+    bench.add_argument("--out", default="")
+    bench.add_argument("--limit", type=int, default=0, help="max decisions (0 = all)")
+    bench.add_argument("--e2e-limit", type=int, default=0, help="max end-to-end episodes (0 = all)")
+    bench.set_defaults(fn=_bench)
 
     chat = sub.add_parser("chat", help="interactive terminal chat")
     chat.add_argument("--model", required=True, help="model directory")

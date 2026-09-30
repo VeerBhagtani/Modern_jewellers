@@ -1,1 +1,1 @@
-"""Agent runtime: task state, memory injection, verification. (Milestone 6)"""
+"""Agent layer: context, sandbox tools, episodes, runtime, synthetic data."""

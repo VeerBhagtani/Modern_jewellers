@@ -1,0 +1,137 @@
+"""Agent runtime: model turn -> validated action -> tool execution -> observation -> repeat.
+
+Defence in depth against unreliable output:
+  1. token mask: the model cannot emit input-only tokens (no forged tool results)
+  2. protocol validation: every turn must parse into exactly one schema-valid action,
+     tool calls must match the tool's argument schema; otherwise resample (bounded)
+  3. completion guard: `finish` right after a failed tool call (with no success since)
+     is converted to `fail`, so a false "Done." never reaches the user
+  4. step limit: at most `max_tool_calls` tool calls per user message
+"""
+
+from __future__ import annotations
+
+import dataclasses
+from collections.abc import Callable
+from typing import Any
+
+from arouse.agent.episode import Header, encode_prompt, turn_event
+from arouse.inference import InferenceEngine, SamplingParams
+from arouse.protocol import Action, ProtocolError, ToolRegistry, Turn, decode_turn
+from arouse.tokenizer import Special
+
+Executor = Callable[[str, dict[str, Any]], tuple[bool, dict[str, Any]]]
+
+
+@dataclasses.dataclass
+class TurnResult:
+    turn: Turn
+    attempts: int
+    raw_text: str
+    valid: bool  # False = model never produced a valid turn (runtime substituted a fail)
+    guarded: bool = False  # completion guard rewrote a false finish
+
+
+@dataclasses.dataclass
+class RunResult:
+    events: list[dict[str, Any]]  # new events appended during this run
+    final: Action
+    turns: list[TurnResult]
+
+
+def last_observation(events: list[dict[str, Any]]) -> str | None:
+    """Type of the latest tool observation since the last user message."""
+    for ev in reversed(events):
+        if ev["type"] == "user":
+            return None
+        if ev["type"] in ("tool_result", "tool_error"):
+            return ev["type"]
+    return None
+
+
+class AgentRuntime:
+    def __init__(
+        self,
+        engine: InferenceEngine,
+        registry: ToolRegistry,
+        *,
+        max_tool_calls: int = 6,
+        max_new_tokens: int = 200,
+        retries: int = 2,
+        guard_completion: bool = True,
+    ) -> None:
+        self.engine = engine
+        self.registry = registry
+        self.max_tool_calls = max_tool_calls
+        self.max_new_tokens = max_new_tokens
+        self.retries = retries
+        self.guard_completion = guard_completion
+
+    def _fit(self, header: Header, events: list[dict[str, Any]]) -> list[int]:
+        """Prompt ids; drops the oldest whole user exchanges if the context is too long."""
+        tok = self.engine.tokenizer
+        budget = self.engine.context_length - self.max_new_tokens
+        evs = list(events)
+        while True:
+            ids = encode_prompt(tok, header, evs)
+            if len(ids) <= budget:
+                return ids
+            nxt = next((i for i, e in enumerate(evs) if i > 0 and e["type"] == "user"), None)
+            if nxt is None:
+                raise ProtocolError(f"conversation needs {len(ids)} tokens; the model allows {budget}")
+            evs = evs[nxt:]
+
+    def next_turn(self, header: Header, events: list[dict[str, Any]]) -> TurnResult:
+        prompt = self._fit(header, events)
+        tok = self.engine.tokenizer
+        raw = ""
+        for attempt in range(1 + self.retries):
+            params = SamplingParams(max_new_tokens=self.max_new_tokens, temperature=0.0 if attempt == 0 else 0.7,
+                                    top_p=0.95, seed=attempt)
+            gen = self.engine.generate_ids(prompt, params, stop_ids=[Special.END], banned_ids=[Special.EOS])
+            raw = gen.text
+            try:
+                turn = decode_turn(tok, gen.token_ids)
+                if turn.action.type == "tool_call":
+                    self.registry.validate_call(turn.action.tool, turn.action.arguments)
+            except ProtocolError:
+                continue
+            return self._guard(TurnResult(turn, attempt + 1, raw, True), events)
+        fallback = Turn(Action.fail("Sorry, I couldn't work out a valid next step for that request."),
+                        verify="runtime: the model did not produce a valid action")
+        return TurnResult(fallback, 1 + self.retries, raw, False)
+
+    def _guard(self, r: TurnResult, events: list[dict[str, Any]]) -> TurnResult:
+        if self.guard_completion and r.turn.action.type == "finish" and last_observation(events) == "tool_error":
+            fixed = Turn(Action.fail("The last step failed, so the task was not completed."),
+                         plan=r.turn.plan, verify="runtime guard: finish after a failed tool call")
+            return dataclasses.replace(r, turn=fixed, guarded=True)
+        return r
+
+    def run(self, header: Header, events: list[dict[str, Any]], execute: Executor) -> RunResult:
+        """Continue the conversation (whose last event is usually a user message) until a
+        terminal action (ask_user / finish / fail)."""
+        history = list(events)
+        new: list[dict[str, Any]] = []
+        turns: list[TurnResult] = []
+        calls = 0
+        while True:
+            r = self.next_turn(header, history)
+            turns.append(r)
+            ev = turn_event(r.turn)
+            history.append(ev)
+            new.append(ev)
+            action = r.turn.action
+            if action.is_terminal:
+                return RunResult(new, action, turns)
+            if calls >= self.max_tool_calls:
+                stop = Turn(Action.fail("I stopped because the task needed too many steps."), verify="runtime: step limit")
+                ev = turn_event(stop)
+                history.append(ev)
+                new.append(ev)
+                return RunResult(new, stop.action, turns)
+            calls += 1
+            ok, payload = execute(action.tool, action.arguments)
+            obs = {"type": "tool_result" if ok else "tool_error", "content": payload}
+            history.append(obs)
+            new.append(obs)

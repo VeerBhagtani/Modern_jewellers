@@ -1,0 +1,18 @@
+# Agent SFT data for arouse-agent-s. Loss only on Arouse's own turns; windows start at episode starts.
+name: agent_v1
+tokenizer: artifacts/tokenizers/arouse-agent
+output_dir: artifacts/data/agent_v1
+val_fraction: 0.01
+min_chars: 1
+max_bad_char_ratio: 0.1
+sources:
+  - name: agent
+    paths: [artifacts/datasets/agent_v1/train.jsonl]
+    format: jsonl
+    category: agent
+    origin: arouse/agent/synth.py split=train seed=101 (scripts/build_agent_data.py)
+    license: project-owned
+    allow_special: true
+    loss_on: assistant
+    window: doc_start
+    weight: 1.0

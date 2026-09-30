@@ -74,9 +74,14 @@ class InferenceEngine:
         prompt_ids: Sequence[int],
         params: SamplingParams | None = None,
         stop_ids: Iterable[int] = DEFAULT_STOP,
+        banned_ids: Iterable[int] = (),
     ) -> Iterator[StreamEvent]:
         params = params or SamplingParams()
         stop = {int(s) for s in stop_ids}
+        banned = self._banned
+        extra = [int(b) for b in banned_ids]
+        if extra:
+            banned = torch.cat((banned, torch.tensor(extra, dtype=torch.long)))
         if not prompt_ids:
             raise ValueError("prompt must contain at least one token")
         if len(prompt_ids) >= self.context_length:
@@ -94,7 +99,7 @@ class InferenceEngine:
 
         for step in range(params.max_new_tokens):
             logits = logits.float().cpu()
-            logits[self._banned] = float("-inf")
+            logits[banned] = float("-inf")
             tok = sample_next(logits, params, gen)
             if tok in stop:
                 yield StreamEvent(tok, decoder.decode(b"", final=True), "stop")
@@ -117,9 +122,9 @@ class InferenceEngine:
     # --- conveniences ----------------------------------------------------
 
     def generate_ids(self, prompt_ids: Sequence[int], params: SamplingParams | None = None,
-                     stop_ids: Iterable[int] = DEFAULT_STOP) -> Generation:
+                     stop_ids: Iterable[int] = DEFAULT_STOP, banned_ids: Iterable[int] = ()) -> Generation:
         texts, ids, reason = [], [], "stop"
-        for ev in self.stream(prompt_ids, params, stop_ids):
+        for ev in self.stream(prompt_ids, params, stop_ids, banned_ids):
             texts.append(ev.text)
             if ev.token_id is not None and ev.finish_reason != "stop":
                 ids.append(ev.token_id)

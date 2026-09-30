@@ -10,6 +10,7 @@ CATEGORIES = ("general", "code", "structured", "instructions", "agent", "tool_us
 FORMATS = ("txt", "jsonl")
 SPLIT_MODES = ("file", "paragraphs", "lines")
 LOSS_MODES = ("all", "assistant")
+WINDOW_MODES = ("random", "doc_start")
 
 
 @dataclasses.dataclass
@@ -25,6 +26,7 @@ class DataSourceConfig(ConfigBase):
     split: str = "file"  # txt only: one doc per file / per blank-line paragraph / per line
     allow_special: bool = False  # True ONLY for project-rendered data whose special tokens are real structure
     loss_on: str = "all"  # "assistant": train only on tokens inside <|arouse|> ... <|end|> turns
+    window: str = "random"  # "doc_start": training windows begin at a document start (whole episodes)
 
     def validate(self) -> None:
         if not self.name or not self.name.replace("_", "").replace("-", "").isalnum():
@@ -41,6 +43,8 @@ class DataSourceConfig(ConfigBase):
             raise ConfigError(f"source {self.name}: split must be one of {SPLIT_MODES}")
         if self.loss_on not in LOSS_MODES:
             raise ConfigError(f"source {self.name}: loss_on must be one of {LOSS_MODES}")
+        if self.window not in WINDOW_MODES:
+            raise ConfigError(f"source {self.name}: window must be one of {WINDOW_MODES}")
         if self.weight <= 0:
             raise ConfigError(f"source {self.name}: weight must be > 0")
 

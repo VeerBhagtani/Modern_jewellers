@@ -33,7 +33,10 @@ class Batch:
 class PackedStream:
     """One source/split: a memory-mapped token stream + mask."""
 
-    def __init__(self, directory: Path, name: str, split: str, dtype: str) -> None:
+    def __init__(self, directory: Path, name: str, split: str, dtype: str, window: str = "random") -> None:
+        self.window_mode = window
+        docs_path = directory / f"{name}.{split}.docs.bin"
+        self.doc_starts = np.fromfile(docs_path, dtype=np.uint64) if docs_path.exists() else np.zeros(0, np.uint64)
         tok_path = directory / f"{name}.{split}.tokens.bin"
         self.tokens = np.memmap(tok_path, dtype=np.dtype(dtype), mode="r") if tok_path.stat().st_size else np.zeros(0, np.uint16)
         mask_path = directory / f"{name}.{split}.mask.bin"
@@ -44,6 +47,11 @@ class PackedStream:
 
     def __len__(self) -> int:
         return len(self.tokens)
+
+    def random_start(self, g: torch.Generator) -> int:
+        if self.window_mode == "doc_start" and len(self.doc_starts):
+            return int(self.doc_starts[int(torch.randint(0, len(self.doc_starts), (1,), generator=g))])
+        return int(torch.randint(0, len(self.tokens), (1,), generator=g))
 
     def window(self, start: int, length: int) -> tuple[np.ndarray, np.ndarray]:
         """`length` tokens from `start`, wrapping around (short sources are tiled)."""
@@ -75,7 +83,7 @@ class MixtureLoader:
         self.val: dict[str, PackedStream] = {}
         weights = []
         for s in self.meta["sources"]:
-            tr = PackedStream(self.dir, s["name"], "train", dtype)
+            tr = PackedStream(self.dir, s["name"], "train", dtype, s.get("window", "random"))
             if len(tr) >= 2:
                 self.train[s["name"]] = tr
                 weights.append(s["weight"])
@@ -103,8 +111,7 @@ class MixtureLoader:
         windows = []
         for p in picks:
             stream = self.train[self.names[p]]
-            start = int(torch.randint(0, len(stream), (1,), generator=g))
-            windows.append(stream.window(start, self.seq_len + 1))
+            windows.append(stream.window(stream.random_start(g), self.seq_len + 1))
         return _to_batch(windows)
 
     def val_batches(self, batch_size: int, max_batches: int) -> dict[str, list[Batch]]:

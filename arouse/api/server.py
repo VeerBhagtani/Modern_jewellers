@@ -4,7 +4,9 @@
     GET  /v1/health      status + model info
     POST /v1/chat        {"messages":[{"role","content"}], "max_tokens", "temperature", "top_k", "top_p", "seed", "stream"}
     POST /v1/generate    {"prompt", "allow_special", ...same sampling fields..., "stream"}
-    POST /v1/agent       501 until Milestone 6
+    POST /v1/agent       next structured action for a client-managed conversation (MDA)
+    POST /v1/agent/run   local demo: server session + sandbox tools, runs to a terminal action
+    POST /v1/agent/reset forget a demo session
 
 Streaming responses are Server-Sent Events: `data: {"delta": "..."}` ... `data: {"done": true, ...}`.
 One model, one generation at a time (a lock serialises requests).
@@ -21,6 +23,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from arouse.api.agent_service import AgentService
+from arouse.api.errors import ApiError
 from arouse.config import ConfigError
 from arouse.inference import InferenceEngine, Message, PromptTooLong, SamplingParams, StreamEvent
 
@@ -34,19 +38,13 @@ _ROUTE_KEYS = {
 }  # "model" is accepted and ignored (one model per server)
 
 
-class ApiError(Exception):
-    def __init__(self, status: int, message: str) -> None:
-        super().__init__(message)
-        self.status = status
-        self.message = message
-
-
 class ArouseService:
     """Transport-independent request handling (the HTTP handler is a thin shell)."""
 
     def __init__(self, engine: InferenceEngine) -> None:
         self.engine = engine
         self.lock = threading.Lock()
+        self.agent = AgentService(engine, self.lock)
 
     def health(self) -> dict[str, Any]:
         return {"status": "ok", "api_version": API_VERSION, "model": self.engine.info()}
@@ -153,24 +151,32 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
         routes = {"/v1/chat": "chat", "/v1/generate": "generate"}
+        agent_routes = {"/v1/agent": "next_action", "/v1/agent/run": "run", "/v1/agent/reset": "reset"}
         try:
-            if path == "/v1/agent":
-                raise ApiError(501, "agent endpoint arrives in Milestone 6")
-            if path not in routes:
-                raise ApiError(404, f"no route POST {path}")
-            body = self._read_json()
-            unknown = sorted(set(body) - _ROUTE_KEYS[routes[path]])
-            if unknown:
-                raise ApiError(400, f"unknown fields: {unknown}")
-            svc = self.server.service
-            params = svc.sampling_params(body)
-            stream = body.get("stream", False)
-            if not isinstance(stream, bool):
-                raise ApiError(400, "'stream' must be a boolean")
-            prompt = svc.prompt_ids(routes[path], body, params)
+            self._post(path, routes, agent_routes)
         except ApiError as e:
             self._error(e.status, e.message)
+        except Exception as e:  # never drop the connection without an answer
+            self.log_error("internal error: %r", e)
+            self._error(500, "internal error")
+
+    def _post(self, path: str, routes: dict[str, str], agent_routes: dict[str, str]) -> None:
+        if path in agent_routes:
+            body = self._read_json()
+            self._json(200, getattr(self.server.service.agent, agent_routes[path])(body))
             return
+        if path not in routes:
+            raise ApiError(404, f"no route POST {path}")
+        body = self._read_json()
+        unknown = sorted(set(body) - _ROUTE_KEYS[routes[path]])
+        if unknown:
+            raise ApiError(400, f"unknown fields: {unknown}")
+        svc = self.server.service
+        params = svc.sampling_params(body)
+        stream = body.get("stream", False)
+        if not isinstance(stream, bool):
+            raise ApiError(400, "'stream' must be a boolean")
+        prompt = svc.prompt_ids(routes[path], body, params)
         events = svc.run(prompt, params)
         if stream:
             self._stream(routes[path], events, len(prompt))

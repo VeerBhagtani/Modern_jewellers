@@ -29,7 +29,8 @@ def page(tiny_tokenizer):
     if exe is None:
         pytest.skip("no Chromium binary")
     torch.manual_seed(0)
-    srv = make_server(InferenceEngine(ArouseTransformer(get_preset("arouse-tiny")), tiny_tokenizer), port=0)
+    model = ArouseTransformer(get_preset("arouse-tiny").replace(context_length=1024))
+    srv = make_server(InferenceEngine(model, tiny_tokenizer), port=0)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     with sync_api.sync_playwright() as p:
         browser = p.chromium.launch(executable_path=exe)
@@ -51,20 +52,27 @@ def test_status_shows_untrained(page):
     assert "random weights" in pg.inner_text("#note")
 
 
-def test_send_and_stream_reply(page):
+def test_send_shows_final_answer_and_steps(page):
     pg, errors = page
-    pg.click("#settingsBtn")
-    pg.fill("#maxTokens", "12")
-    pg.click("#settingsBtn")
     pg.fill("#input", "Remind me <|finish|> tomorrow")
     pg.keyboard.press("Enter")
-    pg.wait_for_selector(".msg.assistant .meta", timeout=30000)
+    pg.wait_for_selector(".msg.assistant details.steps", timeout=60000)
     user = pg.locator(".msg.user").last
-    assert user.inner_text() == "Remind me <|finish|> tomorrow"  # literal, not a token chip
-    assert user.locator(".tok").count() == 0
-    assert "tokens" in pg.locator(".msg.assistant .meta").last.inner_text()
-    assert not pg.is_disabled("#input")
+    assert user.inner_text() == "Remind me <|finish|> tomorrow"  # literal text, never a control token
+    assert "step" in pg.locator(".msg.assistant details.steps summary").last.inner_text()
+    assert not pg.is_disabled("#sendBtn")
     assert errors == []
+
+
+def test_suggestion_chip_sends(page):
+    pg, _ = page
+    pg.click("#newBtn")
+    chips = pg.locator(".sg")
+    assert chips.count() >= 4
+    n_before = pg.locator(".msg.user").count()
+    chips.first.click()
+    pg.wait_for_function("document.querySelectorAll('.msg.assistant details').length >= 1", timeout=60000)
+    assert pg.locator(".msg.user").count() == n_before + 1
 
 
 def test_no_horizontal_scroll_on_phone(page):
@@ -75,4 +83,4 @@ def test_no_horizontal_scroll_on_phone(page):
 def test_new_chat_clears(page):
     pg, _ = page
     pg.click("#newBtn")
-    assert pg.locator(".msg").count() == 0
+    assert pg.locator(".msg").count() == 0 and pg.locator(".sg").count() >= 4

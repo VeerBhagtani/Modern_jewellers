@@ -4,6 +4,7 @@ Output directory:
     meta.json                     provenance, per-source stats, tokenizer fingerprint, data fingerprint
     <source>.<split>.tokens.bin   uint16/uint32 token stream; docs are <|bos|> ... <|eos|>
     <source>.<split>.mask.bin     uint8 per token: 1 = this token is a training target
+    <source>.<split>.docs.bin     uint64 offset of each document start
 """
 
 from __future__ import annotations
@@ -103,6 +104,7 @@ def prepare(cfg: DataConfig) -> dict[str, Any]:
 
     for src in cfg.sources:
         buffers: dict[str, tuple[list[int], list[int]]] = {s: ([], []) for s in SPLITS}
+        starts: dict[str, list[int]] = {s: [] for s in SPLITS}
         stats = {"docs_read": 0, "docs_dropped_clean": 0, "docs_dropped_dup": 0, "docs": {s: 0 for s in SPLITS}}
         files = source_files(src)
         for f in files:
@@ -119,6 +121,7 @@ def prepare(cfg: DataConfig) -> dict[str, Any]:
                 seen[key] = src.name
                 split = "val" if is_validation(text, cfg.val_fraction) else "train"
                 ids, mask = encode_document(tok, text, src)
+                starts[split].append(len(buffers[split][0]))
                 buffers[split][0].extend(ids)
                 buffers[split][1].extend(mask)
                 stats["docs"][split] += 1
@@ -127,9 +130,10 @@ def prepare(cfg: DataConfig) -> dict[str, Any]:
         for split, (ids, mask) in buffers.items():
             np.asarray(ids, dtype=dtype).tofile(out / f"{src.name}.{split}.tokens.bin")
             np.asarray(mask, dtype=np.uint8).tofile(out / f"{src.name}.{split}.mask.bin")
+            np.asarray(starts[split], dtype=np.uint64).tofile(out / f"{src.name}.{split}.docs.bin")
             tokens[split] = {"tokens": len(ids), "target_tokens": int(sum(mask))}
         sources_meta.append({
-            **{k: getattr(src, k) for k in ("name", "category", "origin", "license", "weight", "loss_on", "allow_special")},
+            **{k: getattr(src, k) for k in ("name", "category", "origin", "license", "weight", "loss_on", "allow_special", "window")},
             "files": [{"path": f.as_posix(), "sha256": _sha256(f)} for f in files],
             **stats,
             "splits": tokens,
