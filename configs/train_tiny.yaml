@@ -1,0 +1,25 @@
+# CPU-friendly run: arouse-tiny (1.0M params) on the tiny dataset.
+run_name: arouse-tiny
+model_config: configs/model_tiny.yaml
+data_dir: artifacts/data/tiny
+out_dir: checkpoints/arouse-tiny
+seed: 1234
+batch_size: 16
+grad_accum_steps: 1
+seq_len: null            # = context_length (256)
+max_steps: 1500
+lr: 3.0e-3
+min_lr: 3.0e-4
+warmup_steps: 100
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+precision: fp32
+device: auto
+threads: 4
+log_interval: 50
+eval_interval: 250
+eval_batches: 4
+checkpoint_interval: 500
+keep_checkpoints: 2

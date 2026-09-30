@@ -1,0 +1,44 @@
+# Tiny dataset for CPU pipeline runs. Every source declares origin + license.
+name: tiny
+tokenizer: artifacts/tokenizers/arouse-tiny
+output_dir: artifacts/data/tiny
+val_fraction: 0.1
+min_chars: 1
+max_bad_char_ratio: 0.1
+sources:
+  - name: general
+    paths: [datasets/tokenizer_tiny/general.txt]
+    split: paragraphs
+    category: general
+    origin: hand-written for Arouse
+    license: project-owned
+    weight: 1.0
+  - name: code
+    paths: [datasets/tokenizer_tiny/code.txt]
+    split: paragraphs
+    category: code
+    origin: hand-written for Arouse
+    license: project-owned
+    weight: 0.5
+  - name: structured
+    paths: [datasets/tokenizer_tiny/structured.txt, datasets/tokenizer_tiny/multilingual.txt]
+    split: paragraphs
+    category: structured
+    origin: hand-written for Arouse
+    license: project-owned
+    weight: 0.25
+  - name: scheduling
+    paths: [datasets/tokenizer_tiny/scheduling.jsonl]
+    format: jsonl
+    category: scheduling
+    origin: scripts/build_tiny_tokenizer_corpus.py --seed 1234
+    license: project-owned
+    weight: 1.0
+  - name: agent
+    paths: [datasets/tokenizer_tiny/agent_trajectories.jsonl]
+    format: jsonl
+    category: agent
+    origin: scripts/build_tiny_tokenizer_corpus.py --seed 1234
+    license: project-owned
+    allow_special: true   # project-rendered: special tokens are real structure
+    weight: 3.0

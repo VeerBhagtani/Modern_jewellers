@@ -8,7 +8,7 @@ version = "0.1.0.dev0"
 description = "Arouse AI: an independently trained language model for reliable agentic task execution."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["pyyaml>=6.0", "torch>=2.2"]
+dependencies = ["pyyaml>=6.0", "numpy>=1.24", "torch>=2.2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

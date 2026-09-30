@@ -18,3 +18,27 @@ def tiny_tokenizer() -> ArouseTokenizer:
         output_dir="unused",
     )
     return train_tokenizer(cfg)
+
+
+@pytest.fixture(scope="session")
+def tiny_data_dir(tiny_tokenizer, tmp_path_factory):
+    """Prepared (packed) data from two tiny sources, for training tests."""
+    from arouse.data.config import DataConfig
+    from arouse.data.prepare import prepare
+
+    root = tmp_path_factory.mktemp("data")
+    tiny_tokenizer.save(root / "tok")
+    cfg = DataConfig.from_dict({
+        "name": "test",
+        "tokenizer": str(root / "tok"),
+        "output_dir": str(root / "packed"),
+        "val_fraction": 0.1,
+        "sources": [
+            {"name": "agent", "paths": [str(TINY_DATA / "agent_trajectories.jsonl")], "format": "jsonl",
+             "category": "agent", "origin": "generated", "license": "project-owned", "allow_special": True, "weight": 3.0},
+            {"name": "general", "paths": [str(TINY_DATA / "general.txt")], "split": "paragraphs",
+             "category": "general", "origin": "hand-written", "license": "project-owned"},
+        ],
+    })
+    prepare(cfg)
+    return root / "packed"

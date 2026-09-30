@@ -2,6 +2,8 @@
 
     arouse model info --config configs/model.yaml
     arouse model init --config configs/model_tiny.yaml --tokenizer DIR --out DIR   (random weights)
+    arouse data prepare --config configs/data_tiny.yaml
+    arouse train --config configs/train_tiny.yaml [--max-steps N]   (auto-resumes)
     arouse chat  --model DIR                    terminal chat (streaming)
     arouse serve --model DIR [--port 8000]      local API + chat UI at http://127.0.0.1:8000
     arouse tokenizer train --config configs/tokenizer_tiny.yaml
@@ -104,6 +106,31 @@ def _serve(a: argparse.Namespace) -> int:
     return 0
 
 
+def _data_prepare(a: argparse.Namespace) -> int:
+    from arouse.data.config import DataConfig
+    from arouse.data.prepare import prepare
+
+    meta = prepare(DataConfig.from_yaml(a.config))
+    for s in meta["sources"]:
+        tr, va = s["splits"]["train"], s["splits"]["val"]
+        print(f"{s['name']:>12} [{s['category']}] docs {s['docs']['train']}/{s['docs']['val']} (train/val) "
+              f"tokens {tr['tokens']}/{va['tokens']} dropped {s['docs_dropped_clean']} dup {s['docs_dropped_dup']} "
+              f"weight {s['weight']}")
+    print(f"data fingerprint {meta['data_fingerprint']} -> {meta['config']['output_dir']}")
+    return 0
+
+
+def _train(a: argparse.Namespace) -> int:
+    from arouse.training.config import TrainingConfig
+    from arouse.training.trainer import Trainer
+
+    cfg = TrainingConfig.from_yaml(a.config)
+    if a.max_steps:
+        cfg = cfg.replace(max_steps=a.max_steps)
+    Trainer(cfg).train()
+    return 0
+
+
 def _add_sampling_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--max-tokens", type=int, default=200)
     p.add_argument("--temperature", type=float, default=0.8)
@@ -172,6 +199,16 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--out", required=True)
     init.add_argument("--seed", type=int, default=0)
     init.set_defaults(fn=_model_init)
+
+    data = sub.add_parser("data").add_subparsers(dest="cmd", required=True)
+    prep = data.add_parser("prepare", help="clean, dedup, split, tokenize and pack a dataset")
+    prep.add_argument("--config", required=True)
+    prep.set_defaults(fn=_data_prepare)
+
+    train = sub.add_parser("train", help="train a model (auto-resumes from the latest checkpoint)")
+    train.add_argument("--config", required=True)
+    train.add_argument("--max-steps", type=int, default=0)
+    train.set_defaults(fn=_train)
 
     chat = sub.add_parser("chat", help="interactive terminal chat")
     chat.add_argument("--model", required=True, help="model directory")

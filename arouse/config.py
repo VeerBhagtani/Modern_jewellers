@@ -49,6 +49,17 @@ def _matches(value: Any, hint: Any) -> bool:
     return isinstance(value, hint)
 
 
+def _nested(value: Any, hint: Any) -> Any:
+    """Build nested configs from plain dicts: `sub: SubConfig` and `items: list[SubConfig]`."""
+    if isinstance(hint, type) and issubclass(hint, ConfigBase) and isinstance(value, dict):
+        return hint.from_dict(value)
+    if get_origin(hint) is list and isinstance(value, list):
+        (item,) = get_args(hint) or (Any,)
+        if isinstance(item, type) and issubclass(item, ConfigBase):
+            return [item.from_dict(v) if isinstance(v, dict) else v for v in value]
+    return value
+
+
 @dataclasses.dataclass
 class ConfigBase:
     def __post_init__(self) -> None:
@@ -78,7 +89,8 @@ class ConfigBase:
         unknown = sorted(set(data) - known)
         if unknown:
             raise ConfigError(f"{cls.__name__}: unknown keys {unknown}")
-        return cls(**data)
+        hints = get_type_hints(cls)
+        return cls(**{k: _nested(v, hints[k]) for k, v in data.items()})
 
     def to_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)

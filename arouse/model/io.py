@@ -67,7 +67,10 @@ def save_pretrained(
 def load_pretrained(
     directory: str | Path, *, device: str | torch.device = "cpu", attn_impl: str = "sdpa"
 ) -> tuple[ArouseTransformer, ArouseTokenizer, dict[str, Any]]:
+    """Load a model export, or the newest checkpoint of a training run directory."""
     d = Path(directory)
+    if (d / "LATEST").exists():  # a training run directory: use its newest checkpoint
+        d = d / (d / "LATEST").read_text(encoding="utf-8").strip()
     try:
         meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
     except FileNotFoundError as e:
