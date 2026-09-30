@@ -39,7 +39,7 @@ def write_jsonl(path: Path, rows) -> int:  # noqa: ANN001
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--train", type=int, default=60000)
+    ap.add_argument("--train", type=int, default=80000)
     ap.add_argument("--test", type=int, default=400)
     ap.add_argument("--indist", type=int, default=150)
     ap.add_argument("--out", default="artifacts/datasets/agent_v1")

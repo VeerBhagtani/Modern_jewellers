@@ -15,6 +15,7 @@ from typing import Any, Callable
 from arouse.agent.context import DAY_CODES, WEEKDAYS, build_context, fmt_dt, next_weekday_date
 from arouse.agent.episode import Header
 from arouse.agent.tools import REGISTRY, Reminder, Sandbox
+from arouse.agent.wordlist import ADJECTIVES, NAMES, NOUNS, VERBS
 from arouse.protocol import Action, Turn
 
 # --- vocab pools (train / test disjoint) -------------------------------------------
@@ -90,6 +91,29 @@ def compositional_task(rng: random.Random) -> str:
     if k < 0.9:
         return f"send {rng.choice(THINGS)} to {person}"
     return f"{rng.choice(VERB_THING)} {rng.choice(THINGS)} with {person}"
+
+
+def wild_task(rng: random.Random) -> str:
+    """Unpredictable but natural-looking phrase: only copying reproduces it."""
+    name = pseudo_word(rng) if rng.random() < 0.3 else rng.choice(NAMES)
+    adj = rng.choice(ADJECTIVES) + " " if rng.random() < 0.5 else ""
+    noun, noun2 = rng.choice(NOUNS), rng.choice(NOUNS)
+    v = rng.choice(VERBS)
+    return rng.choice([
+        f"{v} the {adj}{noun}", f"{v} the {noun} and the {noun2}", f"{v} {name}", f"{v} the {adj}{noun} for {name}",
+        f"{v} {rng.randint(2, 99)} {noun}s", f"{v} {name}'s {noun}", f"{v} the {noun} at the {noun2}",
+        f"{v} the {pseudo_word(rng).lower()} {noun}",
+    ])
+
+
+def wild_fact(rng: random.Random) -> str:
+    name = pseudo_word(rng) if rng.random() < 0.3 else rng.choice(NAMES)
+    adj = rng.choice(ADJECTIVES)
+    return rng.choice([
+        f"{name} will {rng.choice(VERBS)} the {adj} {rng.choice(NOUNS)}", f"the {rng.choice(NOUNS)} is {adj}",
+        f"{name} needs {rng.randint(2, 99)} {rng.choice(NOUNS)}s", f"the {adj} {rng.choice(NOUNS)} is at the {rng.choice(NOUNS)}",
+        f"{name} owes {rng.randint(10, 9999)} rupees for the {rng.choice(NOUNS)}",
+    ])
 
 
 def compositional_fact(rng: random.Random) -> str:
@@ -255,18 +279,21 @@ class Generator:
         self.oos = TEST_OUT_OF_SCOPE if test else OUT_OF_SCOPE
 
     def task(self) -> str:
-        if self.test or self.rng.random() < 0.5:
+        """Train: 30% fixed phrases, 30% compositional, 40% wild (forces copying)."""
+        k = self.rng.random()
+        if self.test or k < 0.3:
             return self.rng.choice(self.tasks)
         while True:
-            t = compositional_task(self.rng)
+            t = compositional_task(self.rng) if k < 0.6 else wild_task(self.rng)
             if t.lower() not in TEST_PHRASES:
                 return t
 
     def fact(self) -> str:
-        if self.test or self.rng.random() < 0.5:
+        k = self.rng.random()
+        if self.test or k < 0.3:
             return self.rng.choice(self.facts)
         while True:
-            f = compositional_fact(self.rng)
+            f = compositional_fact(self.rng) if k < 0.6 else wild_fact(self.rng)
             if f.lower() not in TEST_PHRASES:
                 return f
 
@@ -409,7 +436,10 @@ class Generator:
                 [f"Remind me {day} at {t} to {task}.", f"remind me {day} at {t} to {task}", f"{cap(day)} at {t}, remind me to {task}.",
                  f"Set a reminder to {task} {day} at {t}.", f"Can you remind me to {task} {day} at {t}?",
                  f"Please remind me to {task} at {t} {day}.", f"I need to {task} {day} at {t}. Remind me.",
-                 f"Create a reminder for {day} at {t}: {task}.", f"Remind me to {task} at {t} {day}.", f"Reminder {day} {t} {task}"],
+                 f"Create a reminder for {day} at {t}: {task}.", f"Remind me to {task} at {t} {day}.", f"Reminder {day} {t} {task}",
+                 f"Could you set a reminder to {task} {day} at {t}?", f"{cap(day)} at {t} I have to {task}, remind me.",
+                 f"Add a reminder {day} at {t} to {task}.", f"Schedule a reminder to {task} {day} at {t}.",
+                 f"Set up a reminder {day} at {t}: {task}.", f"Remind me to {task}, {day} at {t}."],
                 [f"Hey, could you set a reminder {day} at {t} so I remember to {task}?", f"Don't let me forget to {task} {day} at {t}.",
                  f"{cap(day)} {t}: {task}. Please remind me.", f"Ping me {day} at {t} to {task}."])
             args = {"task": task, "date": date, "time": hm(h, m)}
@@ -433,7 +463,8 @@ class Generator:
         else:
             span, minutes = "half an hour", 30
         text = self.pick([f"Remind me in {span} to {task}.", f"In {span}, remind me to {task}.", f"Remind me to {task} in {span}.",
-                          f"After {span} remind me to {task}.", f"Set a reminder in {span}: {task}."],
+                          f"After {span} remind me to {task}.", f"Set a reminder in {span}: {task}.",
+                          f"Can you remind me in {span} to {task}?", f"Remind me to {task} after {span}."],
                          [f"Ping me in {span} to {task}.", f"{cap(span)} from now, remind me to {task}.",
                           f"Give me a reminder to {task} in {span}."])
         b.user(text)
@@ -448,7 +479,8 @@ class Generator:
         t = say_time(r, h, m)
         text = self.pick([f"{cap(phrase)} at {t}, remind me to {task}.", f"Remind me {phrase} at {t} to {task}.",
                           f"Remind me to {task} {phrase} at {t}.", f"Set a recurring reminder {phrase} at {t}: {task}.",
-                          f"I want a reminder {phrase} at {t} to {task}."],
+                          f"I want a reminder {phrase} at {t} to {task}.", f"Please remind me to {task} {phrase} at {t}.",
+                          f"Add a reminder {phrase} at {t} to {task}."],
                          [f"Could you remind me {phrase} at {t} to {task}?", f"{cap(phrase)} at {t} I need to {task}. Remind me."])
         b.user(text)
         args = {"task": task, "time": hm(h, m), "repeat": repeat}
@@ -558,7 +590,9 @@ class Generator:
     def s_note(self) -> str:
         b = self._b
         fact = self.fact()
-        b.user(self.pick([f"Note that {fact}.", f"Save a note: {fact}.", f"Write down that {fact}.", f"Make a note: {fact}."],
+        b.user(self.pick([f"Note that {fact}.", f"Save a note: {fact}.", f"Write down that {fact}.", f"Make a note: {fact}.",
+                          f"Add a note: {fact}.", f"Please note: {fact}.", f"Keep a note that {fact}.", f"Record this: {fact}.",
+                          f"Take a note: {fact}.", f"note: {fact}"],
                          [f"Please jot down: {fact}.", f"Remember this note: {fact}."]))
         ok, res = b.act(Action.tool_call("notes.create", {"text": fact}), ["intent", "tool_selection", "argument_generation"],
                         plan="Save a note.")

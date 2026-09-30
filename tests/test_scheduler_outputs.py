@@ -59,11 +59,11 @@ def test_every_gold_create_is_valid_and_consistent():
     for ep, users, args in _creates():
         n += 1
         ctx = build_context(datetime.strptime(ep["now"], "%Y-%m-%dT%H:%M"))
-        # the most recent message of this request that names a day decides the date
+        # the latest real request (not a bare answer like "7:30 pm" or "yes") decides the date
         norm = [f" {u} ".replace(",", " ").replace(".", " ").replace("?", " ") for u in users]
-        day_msgs = [u for u in norm if "tomorrow" in u or any(f" {d} " in u for d in DAY_NAMES.values())]
-        if "date" in args and day_msgs and "every" not in day_msgs[-1].lower():
-            u = day_msgs[-1]
+        requests = [u for u in norm if len(u.split()) > 4]
+        u = requests[-1] if requests else norm[-1]
+        if "date" in args and "every" not in u.lower():
             if "tomorrow" in u and "today" not in u:
                 assert args["date"] == ctx["tomorrow"] or "passed" in str(ep), u
             for w, full in DAY_NAMES.items():

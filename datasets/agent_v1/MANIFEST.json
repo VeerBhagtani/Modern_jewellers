@@ -4,22 +4,22 @@
   "files": [
     {
       "file": "artifacts/datasets/agent_v1/train.jsonl",
-      "episodes": 60000,
-      "sha256": "81de1901ba47a77006e3f934efa92de57410aa14442c65f41feb579f52c29f23",
+      "episodes": 80000,
+      "sha256": "a1b196638c5c26eee0be25e72a1b578be757171102d6bf07eb3cf3d1c3047978",
       "origin": "arouse/agent/synth.py split=train seed=101",
       "license": "project-owned"
     },
     {
       "file": "benchmarks/agentbench_v1/test.jsonl",
       "episodes": 400,
-      "sha256": "eefc6544d52f4be8c523fe39a22329d2cb00b2bdf69da801bb73d9b9f495823f",
+      "sha256": "af90f78ef60875a9191ebc5d7934045eb8800f3535c00cb1169e41dc806264e4",
       "origin": "arouse/agent/synth.py split=test seed=9001 (held-out tasks, facts, files, templates)",
       "license": "project-owned"
     },
     {
       "file": "benchmarks/agentbench_v1/in_distribution.jsonl",
       "episodes": 150,
-      "sha256": "26833e7ebd9c24a07079522b700309c0a973b5915e68a3e67785856edb292b77",
+      "sha256": "e40c032d09c4d0a56bbafbecd2c08e5a5b2189857e4488aaec5af6b9642ba6a6",
       "origin": "arouse/agent/synth.py split=train seed=777",
       "license": "project-owned"
     }

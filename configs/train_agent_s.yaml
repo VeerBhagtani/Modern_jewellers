@@ -1,4 +1,4 @@
-# arouse-agent-s on agent_v1 (CPU). 2200 steps x 16 x 768 tokens = 27M tokens (~1.2 epochs).
+# arouse-agent-s on agent_v1 (CPU). 2400 steps x 16 x 768 tokens = 29.5M tokens (~1 epoch).
 run_name: arouse-agent-s
 model_config: configs/model_agent_s.yaml
 data_dir: artifacts/data/agent_v1
@@ -7,7 +7,7 @@ seed: 1234
 batch_size: 16
 grad_accum_steps: 1
 seq_len: null
-max_steps: 2200
+max_steps: 2400
 lr: 2.0e-3
 min_lr: 1.0e-4
 warmup_steps: 100
