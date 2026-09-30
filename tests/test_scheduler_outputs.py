@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from arouse.agent.context import build_context, next_weekday_date
+from arouse.agent.context import build_context, next_weekday_date, upcoming
 from arouse.agent.episode import turn_from_event
 from arouse.agent.synth import Q_TIME, Q_WHEN, Generator, episode_sandbox, generate, rule_words, say_time
 
@@ -13,8 +13,11 @@ EPISODES = generate(1500, seed=5) + generate(300, seed=6, split="test")
 
 def test_context_calendar():
     ctx = build_context(datetime(2026, 9, 30, 19, 21))
-    assert ctx["weekday"] == "wednesday" and ctx["tomorrow"] == "2026-10-01"
-    assert ctx["next"]["mon"] == "2026-10-05" and ctx["next"]["wed"] == "2026-10-07"  # "Wednesday" = next week
+    assert ctx["calendar"].startswith("today 2026-09-30 (Wednesday), tomorrow 2026-10-01, Thursday 2026-10-01")
+    assert ctx["calendar"].endswith("Wednesday 2026-10-07")  # "on Wednesday" said on a Wednesday = next week
+    assert ctx["calendar"].count(" Wednesday") == 1  # today's weekday only in parentheses
+    u = upcoming(datetime(2026, 9, 30, 19, 21))
+    assert u["tomorrow"] == "2026-10-01" and u["monday"] == "2026-10-05" and u["wednesday"] == "2026-10-07"
     assert next_weekday_date(datetime(2026, 9, 30), 3).strftime("%Y-%m-%d") == "2026-10-01"
 
 
@@ -58,7 +61,7 @@ def test_every_gold_create_is_valid_and_consistent():
     n = 0
     for ep, users, args in _creates():
         n += 1
-        ctx = build_context(datetime.strptime(ep["now"], "%Y-%m-%dT%H:%M"))
+        ctx = upcoming(datetime.strptime(ep["now"], "%Y-%m-%dT%H:%M"))
         # the latest real request (not a bare answer like "7:30 pm" or "yes") decides the date
         norm = [f" {u} ".replace(",", " ").replace(".", " ").replace("?", " ") for u in users]
         requests = [u for u in norm if len(u.split()) > 4]
@@ -68,7 +71,7 @@ def test_every_gold_create_is_valid_and_consistent():
                 assert args["date"] == ctx["tomorrow"] or "passed" in str(ep), u
             for w, full in DAY_NAMES.items():
                 if f" {full} " in u:
-                    assert args["date"] == ctx["next"][w], u
+                    assert args["date"] == ctx[full.lower()], u
         if "in_minutes" in args:
             assert any(k in users[-1].lower() for k in ("in ", "after", "from now"))
         if "repeat" in args:

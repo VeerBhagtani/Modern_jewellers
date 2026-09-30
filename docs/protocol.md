@@ -34,7 +34,7 @@ Validation rules (`arouse/protocol/actions.py`):
 ## Episode (conversation) format
 
 ```
-<|bos|><|system|>…<|end|><|context|>{now, weekday, tomorrow, next:{mon…sun}}<|end|><|tools|>[…]<|end|>
+<|bos|><|system|>…<|end|><|context|>{"calendar":"today 2026-09-30 (Wednesday), tomorrow 2026-10-01, Thursday 2026-10-01, …","now":"2026-09-30T19:21",…}<|end|><|tools|>[…]<|end|>
 [<|memory|>…<|end|>] [<|state|>{…}<|end|>]
 <|user|>…<|end|>
 <|arouse|>…<|end|>  <|tool_result|>{…}<|end|>   (or <|tool_error|>{…}<|end|>)
@@ -64,7 +64,7 @@ Training data and runtime prompts are produced by the **same** encoder (`arouse/
 | `file.list` | — | |
 
 **Design rule: the model understands, deterministic code computes.**
-- The runtime supplies a calendar in `<|context|>`: tomorrow's date and the next date of each weekday.
+- The runtime supplies a calendar in `<|context|>`: today, tomorrow and the next date of each weekday, written as plain text (" Friday 2026-10-02") so the weekday matches the user's own word token-for-token. Plans spell out the lookup ("Friday is 2026-10-02.") before the action.
 - Relative and recurring requests are sent as offsets and rules. The scheduler computes the actual times.
 - A 5M-parameter model can then be reliable, because it never has to do calendar arithmetic.
 

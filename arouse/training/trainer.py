@@ -21,7 +21,7 @@ import torch
 from arouse.config import ConfigError
 from arouse.data.loader import Batch, MixtureLoader
 from arouse.model.config import ModelConfig
-from arouse.model.io import check_compatible
+from arouse.model.io import check_compatible, load_pretrained
 from arouse.model.transformer import ArouseTransformer
 from arouse.tokenizer import ArouseTokenizer
 from arouse.training.checkpoint import latest_checkpoint, load_trainer_state, save_checkpoint
@@ -110,6 +110,15 @@ class Trainer:
         self.log(f"resumed from {ckpt.name} (step {self.step})")
         return True
 
+    def _init_from(self) -> None:
+        model, tok, meta = load_pretrained(self.cfg.init_from, device=self.device)
+        if model.config.to_dict() != self.model_cfg.to_dict():
+            raise ConfigError("init_from model has a different architecture than model_config")
+        if tok.fingerprint() != self.tokenizer.fingerprint():
+            raise ConfigError("init_from model uses a different tokenizer than the prepared data")
+        self.model.load_state_dict(model.state_dict())
+        self.log(f"initialised from {self.cfg.init_from} (trained {meta.get('train_steps', 0)} steps)")
+
     def save(self) -> Path:
         path = save_checkpoint(self.out, self.step, self.model, self.tokenizer, self._state(), self.cfg.keep_checkpoints)
         self.log(f"saved {path}")
@@ -181,6 +190,8 @@ class Trainer:
         self.out.mkdir(parents=True, exist_ok=True)
         resumed = self._resume()
         if not resumed:
+            if cfg.init_from:
+                self._init_from()
             cfg.to_yaml(self.out / "training_config.yaml")
             self.model_cfg.to_yaml(self.out / "model_config.yaml")
             run_info = {
@@ -192,6 +203,7 @@ class Trainer:
                 "data_fingerprint": self.data.data_fingerprint,
                 "tokenizer_fingerprint": self.tokenizer.fingerprint(),
                 "tokens_per_step": cfg.batch_size * cfg.grad_accum_steps * self.seq_len,
+                "init_from": cfg.init_from,
             }
             (self.out / "run_info.json").write_text(json.dumps(run_info, indent=2) + "\n", encoding="utf-8")
             self.log(f"run {cfg.run_name}: {self.model_cfg.summary()} on {self.device}")

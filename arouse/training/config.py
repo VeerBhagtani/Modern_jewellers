@@ -16,6 +16,7 @@ class TrainingConfig(ConfigBase):
     data_dir: str  # output of `arouse data prepare`
     out_dir: str  # checkpoints + metrics for this run
     seed: int = 1234
+    init_from: str | None = None  # fine-tune: start from this model export / run dir (fresh optimizer)
 
     # batch: tokens per optimizer step = batch_size * grad_accum_steps * seq_len
     batch_size: int = 8  # micro-batch

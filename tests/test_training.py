@@ -153,3 +153,19 @@ def test_checkpoint_serves_through_inference_engine(run_cfg, tmp_path):
     info = engine.info()
     assert info["trained"] is True and info["train_steps"] == 3
     assert isinstance(engine.generate("hi", arouse.inference.SamplingParams(max_new_tokens=3)).text, str)
+
+
+def test_init_from_finetunes_existing_model(run_cfg, tmp_path):
+    Trainer(run_cfg(max_steps=3, checkpoint_interval=3), log=quiet).train()
+    base = torch.load(tmp_path / "run" / "step_0000003" / "model.pt", weights_only=True)
+    logs = []
+    ft = Trainer(run_cfg(out_dir=str(tmp_path / "ft"), init_from=str(tmp_path / "run"), max_steps=3,
+                         checkpoint_interval=3), log=logs.append)
+    ft._init_from()
+    assert all(torch.equal(ft.model.state_dict()[k], base[k]) for k in base)
+    assert any("initialised from" in m for m in logs)
+    other = tmp_path / "other.yaml"
+    get_preset("arouse-tiny").replace(context_length=64, n_layers=2).to_yaml(other)
+    with pytest.raises(ConfigError, match="architecture"):
+        Trainer(run_cfg(out_dir=str(tmp_path / "ft2"), model_config=str(other), init_from=str(tmp_path / "run")),
+                log=quiet)._init_from()

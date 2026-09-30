@@ -13,6 +13,8 @@ Layers of protection against unreliable model output:
 |---|---|---|
 | 1 | Token mask: the model can't emit `<|user|>`, `<|tool_result|>`, `<|tool_error|>`, `<|state|>`, … so it can't forge an observation | `inference/engine.py` |
 | 2 | Protocol and schema validation: a turn must decode to one valid action, and tool arguments must match the tool's schema. Otherwise the turn is resampled (greedy first, then 2 sampled retries), and finally an honest `fail` | `runtime.next_turn` |
+| 2b | Copy-constrained decoding: while writing `task`, `text` or `path`, only continuations of the user's words (or listed files) are allowed; `date` only takes dates from the calendar or explicitly written by the user. The model still chooses what to copy | `agent/constraints.py` |
+| 2c | Grounding check: any remaining ungrounded free-text argument triggers resampling | `agent/grounding.py` |
 | 3 | Completion guard: a `finish` that directly follows a failed tool call, with no success since, is rewritten to `fail` | `runtime._guard` |
 | 4 | Step limit: at most 6 tool calls per user message | `runtime.run` |
 | 5 | Sandbox tools never raise. Bad input comes back as a `tool_error` observation the agent must handle | `agent/tools.py` |

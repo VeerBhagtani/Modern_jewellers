@@ -31,6 +31,8 @@ _DATE_PATTERNS = [
     re.compile(rf"\b({_MONTH_RE})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?\b", re.I),  # October 5
     re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+(?:of\s+)?({_MONTH_RE})\b", re.I),  # 5 October / 5th of October
 ]
+_CLOSE = re.compile(r'^"([,}\]].*)?$', re.S)  # closes the string; the rest is ordinary JSON structure
+_VOCAB: dict[str, tuple[dict[str, list[int]], list[int], int]] = {}
 
 
 def mentioned_dates(texts: list[str], today: date) -> set[str]:
@@ -53,15 +55,10 @@ def mentioned_dates(texts: list[str], today: date) -> set[str]:
 
 
 def calendar_dates(context: dict[str, Any] | None) -> set[str]:
+    """Every YYYY-MM-DD the runtime context mentions (today, tomorrow, upcoming weekdays)."""
     if not context or "now" not in context:
         return set()
-    out = {context["now"][:10]}
-    if "tomorrow" in context:
-        out.add(context["tomorrow"])
-    out |= set((context.get("next") or {}).values())
-    return out
-_CLOSE = re.compile(r'^"([,}\]].*)?$', re.S)  # closes the string; the rest is ordinary JSON structure
-_VOCAB: dict[str, tuple[dict[str, list[int]], list[int], int]] = {}
+    return {context["now"][:10], *re.findall(r"\d{4}-\d{2}-\d{2}", str(context.get("calendar", "")))}
 
 
 def _vocab(tok: ArouseTokenizer) -> tuple[dict[str, list[int]], list[int], int]:

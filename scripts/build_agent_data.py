@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build the Arouse agent corpus (v1) and the AgentBench v1 case files.
 
-    artifacts/datasets/agent_v1/train.jsonl        {"text": rendered episode}  (large, not committed)
-    datasets/agent_v1/MANIFEST.json                provenance + sha256 (committed)
+    artifacts/datasets/<name>/train.jsonl          {"text": rendered episode}  (large, not committed)
+    datasets/<name>/MANIFEST.json                  provenance + sha256 (committed)
     benchmarks/agentbench_v1/test.jsonl            held-out tasks/templates (committed)
     benchmarks/agentbench_v1/in_distribution.jsonl train-distribution samples, unseen seeds (committed)
 
@@ -42,8 +42,9 @@ def main() -> None:
     ap.add_argument("--train", type=int, default=80000)
     ap.add_argument("--test", type=int, default=400)
     ap.add_argument("--indist", type=int, default=150)
-    ap.add_argument("--out", default="artifacts/datasets/agent_v1")
+    ap.add_argument("--name", default="agent_v2")
     a = ap.parse_args()
+    a.out = f"artifacts/datasets/{a.name}"
 
     out = Path(a.out)
     train_path = out / "train.jsonl"
@@ -53,7 +54,7 @@ def main() -> None:
     write_jsonl(bench / "in_distribution.jsonl", generate(a.indist, INDIST_SEED, "train"))
 
     manifest = {
-        "dataset": "agent_v1",
+        "dataset": a.name,
         "external_sources": [],
         "files": [
             {"file": str(train_path), "episodes": a.train, "sha256": sha256(train_path),
@@ -65,8 +66,8 @@ def main() -> None:
              "origin": f"arouse/agent/synth.py split=train seed={INDIST_SEED}", "license": "project-owned"},
         ],
     }
-    Path("datasets/agent_v1").mkdir(parents=True, exist_ok=True)
-    Path("datasets/agent_v1/MANIFEST.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    Path(f"datasets/{a.name}").mkdir(parents=True, exist_ok=True)
+    Path(f"datasets/{a.name}/MANIFEST.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(manifest, indent=2))
 
 

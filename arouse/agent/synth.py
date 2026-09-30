@@ -332,21 +332,21 @@ class Generator:
     def time(self) -> tuple[int, int]:
         return self.rng.randint(5, 22), self.rng.choice([0, 0, 0, 0, 15, 30, 30, 45, 10, 20, 40, 5, 50])
 
-    def day(self, b: Builder) -> tuple[str, str]:
-        """(phrase, resolved YYYY-MM-DD) for a one-time reminder day."""
+    def day(self, b: Builder) -> tuple[str, str, str]:
+        """(phrase, resolved YYYY-MM-DD, label used in the plan's lookup step)."""
         r, now = self.rng, b.now
         kind = r.choices(["tomorrow", "weekday", "date"], [4, 5, 2])[0]
         if kind == "tomorrow":
-            return "tomorrow", (now + timedelta(days=1)).strftime("%Y-%m-%d")
+            return "tomorrow", (now + timedelta(days=1)).strftime("%Y-%m-%d"), "Tomorrow"
         if kind == "weekday":
             w = r.randrange(7)
             name = WEEKDAYS[w].capitalize()
             phrase = r.choice([f"on {name}", f"this {name}", f"next {name}", f"on {name.lower()}"])
-            return phrase, next_weekday_date(now, w).strftime("%Y-%m-%d")
+            return phrase, next_weekday_date(now, w).strftime("%Y-%m-%d"), name
         d = now + timedelta(days=r.randint(2, 75))
         m = MONTHS[d.month - 1]
         phrase = r.choice([f"on {m} {d.day}", f"on {d.day} {m}", f"on {m[:3]} {d.day}", f"on the {ordinal(d.day)} of {m}"])
-        return phrase, d.strftime("%Y-%m-%d")
+        return phrase, d.strftime("%Y-%m-%d"), f"{m} {d.day}"
 
     def rule(self) -> tuple[str, dict[str, Any], int | None]:
         """(phrase, repeat, forced hour or None)."""
@@ -404,7 +404,7 @@ class Generator:
                 tomorrow = (b.now + timedelta(days=1)).strftime("%Y-%m-%d")
                 args2 = {**args, "date": tomorrow}
                 ok, res = b.act(Action.tool_call("scheduler.create", args2), ["task_state", "argument_generation", "scheduling"],
-                                plan=f"One-time reminder on {tomorrow} at {t}.")
+                                plan=f"Tomorrow is {tomorrow}. One-time reminder on {tomorrow} at {t}.")
                 if ok:
                     self.finish_create(b, res, None, ["task_state"])
             else:
@@ -420,11 +420,11 @@ class Generator:
         h, m = self.time()
         t = say_time(r, h, m)
         if r.random() < 0.12:  # "today": may already have passed -> error path
-            day, date = "today", b.now.strftime("%Y-%m-%d")
+            day, date, label = "today", b.now.strftime("%Y-%m-%d"), "Today"
         elif r.random() < 0.15:  # time only -> scheduler picks the next occurrence
-            day, date = None, None
+            day, date, label = None, None, None
         else:
-            day, date = self.day(b)
+            day, date, label = self.day(b)
         if day is None:
             text = self.pick([f"Remind me at {t} to {task}.", f"Remind me to {task} at {t}.", f"At {t}, remind me to {task}.",
                               f"Set a reminder for {t} to {task}."],
@@ -443,7 +443,7 @@ class Generator:
                 [f"Hey, could you set a reminder {day} at {t} so I remember to {task}?", f"Don't let me forget to {task} {day} at {t}.",
                  f"{cap(day)} {t}: {task}. Please remind me.", f"Ping me {day} at {t} to {task}."])
             args = {"task": task, "date": date, "time": hm(h, m)}
-            plan = f"One-time reminder on {date} at {hm(h, m)}."
+            plan = f"{label} is {date}. One-time reminder on {date} at {hm(h, m)}."
         b.user(text)
         self.create_with_errors(b, args, plan, None, ["intent"])
         return "scheduling_one_time"
@@ -493,21 +493,21 @@ class Generator:
         task = self.task()
         kind = r.choice(["day", "day", "rule", "vague", "later"])
         if kind == "day":
-            day, date = self.day(b)
+            day, date, label = self.day(b)
             text = self.pick([f"Remind me {day} to {task}.", f"Set a reminder {day} to {task}.", f"{cap(day)}, remind me to {task}."],
                              [f"Don't let me forget to {task} {day}.", f"Ping me {day} to {task}."])
-            q, pending = Q_TIME, ("date", date)
+            q, pending = Q_TIME, ("date", date, label)
         elif kind == "rule":
             phrase, repeat, _ = self.rule()
             text = self.pick([f"Remind me {phrase} to {task}.", f"{cap(phrase)}, remind me to {task}."],
                              [f"Could you remind me {phrase} to {task}?"])
-            q, pending = Q_TIME, ("repeat", repeat)
+            q, pending = Q_TIME, ("repeat", repeat, None)
         elif kind == "vague":
-            day, date = self.day(b)
+            day, date, label = self.day(b)
             vague = r.choice(["in the morning", "in the evening", "after dinner", "in the afternoon", "after lunch"])
             text = self.pick([f"Remind me {day} {vague} to {task}.", f"{cap(day)} {vague}, remind me to {task}."],
                              [f"Ping me {day} {vague} to {task}."])
-            q, pending = Q_TIME, ("date", date)
+            q, pending = Q_TIME, ("date", date, label)
         else:
             text = self.pick([f"Remind me later to {task}.", f"Remind me to {task}.", f"Set a reminder to {task}."],
                              [f"Can you remind me to {task} sometime?"])
@@ -521,7 +521,7 @@ class Generator:
         b.user(r.choice([t, f"at {t}", f"make it {t}", f"{t} please"]))
         if pending[0] == "date":
             args = {"task": task, "date": pending[1], "time": hm(h, m)}
-            plan = f"One-time reminder on {pending[1]} at {hm(h, m)}."
+            plan = f"{pending[2]} is {pending[1]}. One-time reminder on {pending[1]} at {hm(h, m)}."
             rep = None
         else:
             args = {"task": task, "time": hm(h, m), "repeat": pending[1]}
@@ -534,7 +534,7 @@ class Generator:
         r, b = self.rng, self._b
         h, m = self.time()
         t = say_time(r, h, m)
-        day, date = self.day(b)
+        day, date, label = self.day(b)
         b.user(self.pick([f"Set a reminder for {day} at {t}.", f"Remind me {day} at {t}.", f"Create a reminder {day} at {t}."],
                          [f"I need a reminder {day} at {t}."]))
         b.act(Action.ask_user(Q_TASK), ["intent", "ambiguity"], plan="The reminder text is missing, so I should ask.")
@@ -544,7 +544,7 @@ class Generator:
         reply, task = r.choice([(task, task), (f"to {task}", task), (f"It's to {task}", task), (cap(task), cap(task))])
         b.user(reply)
         self.create_with_errors(b, {"task": task, "date": date, "time": hm(h, m)},
-                                f"One-time reminder on {date} at {hm(h, m)}.", None, ["task_state"])
+                                f"{label} is {date}. One-time reminder on {date} at {hm(h, m)}.", None, ["task_state"])
         return "ambiguity_followup"
 
     def s_list(self) -> str:
