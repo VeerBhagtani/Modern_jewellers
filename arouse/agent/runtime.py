@@ -4,9 +4,12 @@ Defence in depth against unreliable output:
   1. token mask: the model cannot emit input-only tokens (no forged tool results)
   2. protocol validation: every turn must parse into exactly one schema-valid action,
      tool calls must match the tool's argument schema; otherwise resample (bounded)
-  3. completion guard: `finish` right after a failed tool call (with no success since)
+  3. grounding: free-text arguments (reminder task, note text, file path) must come
+     from the conversation; ungrounded calls are resampled (greedy result kept if no
+     sample is grounded)
+  4. completion guard: `finish` right after a failed tool call (with no success since)
      is converted to `fail`, so a false "Done." never reaches the user
-  4. step limit: at most `max_tool_calls` tool calls per user message
+  5. step limit: at most `max_tool_calls` tool calls per user message
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from collections.abc import Callable
 from typing import Any
 
 from arouse.agent.episode import Header, encode_prompt, turn_event
+from arouse.agent.grounding import grounding_issue
 from arouse.inference import InferenceEngine, SamplingParams
 from arouse.protocol import Action, ProtocolError, ToolRegistry, Turn, decode_turn
 from arouse.tokenizer import Special
@@ -30,6 +34,7 @@ class TurnResult:
     raw_text: str
     valid: bool  # False = model never produced a valid turn (runtime substituted a fail)
     guarded: bool = False  # completion guard rewrote a false finish
+    grounded: bool = True  # False = kept an ungrounded tool call (no grounded alternative found)
 
 
 @dataclasses.dataclass
@@ -59,6 +64,7 @@ class AgentRuntime:
         max_new_tokens: int = 200,
         retries: int = 2,
         guard_completion: bool = True,
+        grounding_samples: int = 4,
     ) -> None:
         self.engine = engine
         self.registry = registry
@@ -66,6 +72,7 @@ class AgentRuntime:
         self.max_new_tokens = max_new_tokens
         self.retries = retries
         self.guard_completion = guard_completion
+        self.grounding_samples = grounding_samples
 
     def _fit(self, header: Header, events: list[dict[str, Any]]) -> list[int]:
         """Prompt ids; drops the oldest whole user exchanges if the context is too long."""
@@ -81,25 +88,39 @@ class AgentRuntime:
                 raise ProtocolError(f"conversation needs {len(ids)} tokens; the model allows {budget}")
             evs = evs[nxt:]
 
+    def _sample(self, prompt: list[int], attempt: int) -> tuple[Turn | None, str]:
+        params = SamplingParams(max_new_tokens=self.max_new_tokens, temperature=0.0 if attempt == 0 else 0.7,
+                                top_p=0.95, seed=attempt)
+        gen = self.engine.generate_ids(prompt, params, stop_ids=[Special.END], banned_ids=[Special.EOS])
+        try:
+            turn = decode_turn(self.engine.tokenizer, gen.token_ids)
+            if turn.action.type == "tool_call":
+                self.registry.validate_call(turn.action.tool, turn.action.arguments)
+        except ProtocolError:
+            return None, gen.text
+        return turn, gen.text
+
     def next_turn(self, header: Header, events: list[dict[str, Any]]) -> TurnResult:
         prompt = self._fit(header, events)
-        tok = self.engine.tokenizer
         raw = ""
-        for attempt in range(1 + self.retries):
-            params = SamplingParams(max_new_tokens=self.max_new_tokens, temperature=0.0 if attempt == 0 else 0.7,
-                                    top_p=0.95, seed=attempt)
-            gen = self.engine.generate_ids(prompt, params, stop_ids=[Special.END], banned_ids=[Special.EOS])
-            raw = gen.text
-            try:
-                turn = decode_turn(tok, gen.token_ids)
-                if turn.action.type == "tool_call":
-                    self.registry.validate_call(turn.action.tool, turn.action.arguments)
-            except ProtocolError:
+        first_valid: TurnResult | None = None
+        attempt = 0
+        # Valid-output retries, then extra samples only while looking for a grounded tool call.
+        while attempt < 1 + self.retries + (self.grounding_samples if first_valid else 0):
+            turn, raw = self._sample(prompt, attempt)
+            attempt += 1
+            if turn is None:
                 continue
-            return self._guard(TurnResult(turn, attempt + 1, raw, True), events)
+            result = TurnResult(turn, attempt, raw, True)
+            if self.retries == 0 or grounding_issue(turn.action, events) is None:
+                return self._guard(result, events)
+            if first_valid is None:
+                first_valid = dataclasses.replace(result, grounded=False)
+        if first_valid is not None:
+            return self._guard(dataclasses.replace(first_valid, attempts=attempt), events)
         fallback = Turn(Action.fail("Sorry, I couldn't work out a valid next step for that request."),
                         verify="runtime: the model did not produce a valid action")
-        return TurnResult(fallback, 1 + self.retries, raw, False)
+        return TurnResult(fallback, attempt, raw, False)
 
     def _guard(self, r: TurnResult, events: list[dict[str, Any]]) -> TurnResult:
         if self.guard_completion and r.turn.action.type == "finish" and last_observation(events) == "tool_error":

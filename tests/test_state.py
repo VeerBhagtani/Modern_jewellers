@@ -48,20 +48,20 @@ def test_validate_events():
 
 
 def test_runtime_executes_tools_and_stops_at_terminal_action(tiny_tokenizer):
-    call = Turn(Action.tool_call("scheduler.create", {"task": "Check sales", "date": "2026-10-01", "time": "08:00"}), plan="p")
+    call = Turn(Action.tool_call("scheduler.create", {"task": "check sales", "date": "2026-10-01", "time": "08:00"}), plan="p")
     done = Turn(Action.finish("Reminder set."), verify="ok")
     rt = AgentRuntime(scripted_engine(tiny_tokenizer, [call, done]), REGISTRY)
     sb = Sandbox(NOW)
-    res = rt.run(HEADER, [{"type": "user", "content": "remind me"}], sb.execute)
+    res = rt.run(HEADER, [{"type": "user", "content": "Remind me tomorrow at 8 to check sales."}], sb.execute)
     assert [e["type"] for e in res.events] == ["arouse", "tool_result", "arouse"]
     assert res.final == done.action and all(t.valid for t in res.turns)
-    assert sb.snapshot()["reminders"][0]["task"] == "Check sales"
+    assert sb.snapshot()["reminders"][0]["task"] == "check sales"
 
 
 def test_runtime_continues_from_state_instead_of_restarting(tiny_tokenizer):
     """Second user turn: the prompt contains the whole earlier exchange (no restart)."""
     ask = Turn(Action.ask_user("What time should I remind you?"))
-    call = Turn(Action.tool_call("scheduler.create", {"task": "Call mom", "date": "2026-10-01", "time": "08:00"}))
+    call = Turn(Action.tool_call("scheduler.create", {"task": "call mom", "date": "2026-10-01", "time": "08:00"}))
     done = Turn(Action.finish("Reminder set."))
     eng = scripted_engine(tiny_tokenizer, [ask, call, done])
     rt = AgentRuntime(eng, REGISTRY)
