@@ -1,0 +1,43 @@
+date,product,quantity,unit_price,customer
+2026-09-01,milk_1l,120,56.00,Sharma Stores
+2026-09-01,curd_500g,40,35.00,Sharma Stores
+2026-09-02,milk_1l,95,56.00,Green Mart
+2026-09-02,paneer_200g,25,90.00,Green Mart
+2026-09-03,ghee_500ml,10,410.00,City Foods
+2026-09-03,milk_500ml,200,29.00,City Foods
+
+farm:
+  name: North Field Dairy
+  herd_size: 48
+  milking_times: ["05:00", "17:00"]
+  collection:
+    truck: daily
+    time: "06:30"
+staff:
+  - name: Ravi
+    role: parlour
+  - name: Meena
+    role: records
+
+{"id": "inv-2041", "date": "2026-09-14", "customer": "Green Mart", "items": [{"sku": "milk_1l", "qty": 95, "price": 56.0}], "total": 5320.0, "paid": false}
+{"id": "inv-2042", "date": "2026-09-15", "customer": "City Foods", "items": [{"sku": "ghee_500ml", "qty": 10, "price": 410.0}], "total": 4100.0, "paid": true}
+
+{
+  "task_id": "t-0007",
+  "goal": "Send the weekly sales summary to the manager",
+  "status": "running",
+  "completed_steps": ["read sales.csv", "compute weekly totals"],
+  "current_step": "write summary",
+  "pending_steps": ["email summary"],
+  "observations": [{"step": "read sales.csv", "rows": 6}],
+  "errors": [],
+  "tool_calls": 2
+}
+
+[server]
+host = "127.0.0.1"
+port = 8080
+
+[logging]
+level = "info"
+file = "logs/arouse.log"

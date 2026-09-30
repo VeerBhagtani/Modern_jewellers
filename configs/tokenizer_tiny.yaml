@@ -1,0 +1,8 @@
+# Tiny tokenizer for tests/debugging. Pairs with configs/model_tiny.yaml.
+vocab_size: 2048
+corpus:
+  - datasets/tokenizer_tiny/*.txt
+  - datasets/tokenizer_tiny/*.jsonl
+output_dir: artifacts/tokenizers/arouse-tiny
+min_frequency: 2
+max_bytes: null

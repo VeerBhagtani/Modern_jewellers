@@ -1,0 +1,10 @@
+# Production tokenizer for Arouse v0.1 (vocab matches configs/model.yaml).
+# Needs the real, provenance-tracked pretraining corpus (Milestone 3); the tiny
+# corpus below is a placeholder and cannot reach 32768 tokens.
+vocab_size: 32768
+corpus:
+  - datasets/tokenizer_tiny/*.txt
+  - datasets/tokenizer_tiny/*.jsonl
+output_dir: artifacts/tokenizers/arouse-v0.1
+min_frequency: 2
+max_bytes: 2000000000
