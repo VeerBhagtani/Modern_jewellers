@@ -4,7 +4,7 @@ An independently trained language model for **reliable agentic task execution**:
 
 - Own tokenizer, architecture, training pipeline, weights, inference engine, and benchmark.
 - Trained from random initialization. It is **not** a wrapper around, or a fine-tune of, any external LLM.
-- The only numerical framework is PyTorch (from Milestone 2).
+- The only numerical framework is PyTorch.
 
 ```
 USER / MDA → Arouse API → inference engine → Arouse model → structured action (tool_call | ask_user | finish | fail)
@@ -14,23 +14,34 @@ MDA (Modern Dairy Assistant) is a separate frontend and is not part of this repo
 
 ## Status
 
-**Milestone 1 of 7 is complete.** See [docs/roadmap.md](docs/roadmap.md).
+**Milestones 1–2 are complete, plus an early inference engine, API and chat UI.** See [docs/roadmap.md](docs/roadmap.md).
 
 | Component | State |
 |---|---|
 | Config system (strict, typed YAML) | ✅ |
-| `ModelConfig`: v0.1 = 110.1M params (12L, d=768, 12 heads, SwiGLU 2048, RoPE, RMSNorm, tied) | ✅ config only; no model code yet |
 | Byte-level BPE tokenizer with agent special tokens | ✅ |
-| Tiny tokenizer corpus + manifest | ✅ |
-| Model, training, inference, protocol, agent, benchmark, API | ⏳ later milestones |
+| Transformer (RoPE, GQA, SwiGLU, RMSNorm, KV cache): v0.1 = 110,119,680 params | ✅ |
+| Inference engine (sampling, streaming, stop tokens, token safety mask) | ✅ core |
+| Local API and chat UI ([docs/api.md](docs/api.md)) | ✅ `/v1/chat`, `/v1/generate`, `/v1/health` |
+| Dataset pipeline and training | ⏳ Milestone 3 |
+| Protocol, agent runtime, benchmark | ⏳ later |
 
-No model has been trained. No benchmark results exist yet.
+**No model has been trained yet.** The chat UI currently runs a randomly initialised model, so its replies are noise, and the UI says so. There are no benchmark results yet.
 
 ## Setup
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[dev]"       # needs PyTorch; CPU is fine for the tiny model
 pytest -q
+```
+
+## Chat UI (quick start)
+
+```bash
+arouse tokenizer train --config configs/tokenizer_tiny.yaml
+arouse model init --config configs/model_tiny.yaml --tokenizer artifacts/tokenizers/arouse-tiny --out artifacts/models/arouse-tiny-random
+arouse serve --model artifacts/models/arouse-tiny-random      # open http://127.0.0.1:8000
+arouse chat  --model artifacts/models/arouse-tiny-random      # or chat in the terminal
 ```
 
 ## Commands
@@ -51,11 +62,14 @@ configs/            model.yaml (v0.1), model_tiny.yaml, tokenizer.yaml, tokenize
 arouse/
   config.py         strict typed config base (unknown keys / wrong types fail loudly)
   cli.py            `arouse` command
-  model/config.py   ModelConfig + exact parameter accounting + presets
   tokenizer/        special_tokens.py, pretokenize.py, bpe.py, tokenizer.py, trainer.py
-  training/ inference/ agent/ protocol/ evaluation/    (later milestones)
+  model/            config.py, embeddings.py (token + RoPE), attention.py, mlp.py, norm.py,
+                    transformer_block.py, transformer.py, lm_head.py, loss.py, io.py (save/load)
+  inference/        sampling.py, chat.py (prompt format), engine.py (KV-cached streaming)
+  api/              server.py (stdlib HTTP), static/index.html (chat UI)
+  training/ agent/ protocol/ evaluation/    (later milestones)
 datasets/           provenance-tracked data (MANIFEST.json per dataset)
-docs/               tokenizer.md (design), roadmap.md
+docs/               tokenizer.md (design), api.md (HTTP API), roadmap.md
 scripts/            dataset generators
 tests/              pytest suite
 checkpoints/ benchmarks/   (later; checkpoints are git-ignored)

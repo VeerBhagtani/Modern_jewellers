@@ -5,12 +5,13 @@ Each milestone is: explain → implement → test → run tests → fix → repo
 | # | Milestone | Status |
 |---|---|---|
 | 1 | Project structure, config system, tokenizer design + implementation, tiny dataset, tests, docs | ✅ done |
-| 2 | Transformer in PyTorch (embeddings, RoPE, attention + causal mask, SwiGLU, RMSNorm, LM head, loss); param count must equal `ModelConfig.parameter_counts()` | next |
-| 3 | Dataset pipeline (sources + provenance, cleaning, dedup, mixing weights, packing, splits) + resumable pretraining (AMP, grad accumulation, LR schedule, checkpoints) | |
+| 2 | Transformer in PyTorch (embeddings, RoPE, attention + causal mask, SwiGLU, RMSNorm, LM head, loss); param count must equal `ModelConfig.parameter_counts()` | ✅ done |
+| 2b | *(Pulled forward on request.)* Inference core (KV cache, sampling, streaming, stop tokens, token safety mask), `arouse chat`, `arouse.generate()`, local API + chat UI | ✅ done |
+| 3 | Dataset pipeline (sources + provenance, cleaning, dedup, mixing weights, packing, splits) + resumable pretraining (AMP, grad accumulation, LR schedule, checkpoints) | next |
 | 4 | Arouse Action Protocol: versioned JSON schemas, validator, `<|X|>body` ↔ `{"type":X,…}` codec, constrained decoding | |
-| 5 | Inference engine (KV cache, sampling, stop tokens, streaming, structured mode), `arouse chat`, `arouse.generate()` | |
+| 5 | Inference: structured-output mode (constrained JSON actions), batching, preallocated KV cache | core done in 2b |
 | 6 | Agent runtime: task state, memory injection, verification, trajectory format + agent SFT data (scheduling, errors, clarification) | |
-| 7 | Arouse AgentBench (≥500 cases, held-out split) + local HTTP API (`/v1/generate`, `/v1/chat`, `/v1/agent`, `/v1/health`) | |
+| 7 | Arouse AgentBench (≥500 cases, held-out split) + `/v1/agent` endpoint | API core done in 2b |
 
 ## Hardware note
 

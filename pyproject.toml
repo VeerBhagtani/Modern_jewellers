@@ -8,16 +8,20 @@ version = "0.1.0.dev0"
 description = "Arouse AI: an independently trained language model for reliable agentic task execution."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["pyyaml>=6.0"]
+dependencies = ["pyyaml>=6.0", "torch>=2.2"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
+ui-test = ["playwright>=1.40"]  # optional browser test of the chat UI
 
 [project.scripts]
 arouse = "arouse.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["arouse*"]
+
+[tool.setuptools.package-data]
+arouse = ["api/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

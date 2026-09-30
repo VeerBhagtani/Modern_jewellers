@@ -1,6 +1,9 @@
 """`arouse` command-line interface.
 
     arouse model info --config configs/model.yaml
+    arouse model init --config configs/model_tiny.yaml --tokenizer DIR --out DIR   (random weights)
+    arouse chat  --model DIR                    terminal chat (streaming)
+    arouse serve --model DIR [--port 8000]      local API + chat UI at http://127.0.0.1:8000
     arouse tokenizer train --config configs/tokenizer_tiny.yaml
     arouse tokenizer encode --tokenizer DIR [--allow-special] TEXT
     arouse tokenizer decode --tokenizer DIR ID [ID ...]
@@ -15,10 +18,14 @@ import sys
 import time
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from arouse.model.config import ModelConfig
 from arouse.tokenizer import ArouseTokenizer, TokenizerTrainingConfig, train_tokenizer
 from arouse.tokenizer.trainer import iter_documents
+
+if TYPE_CHECKING:
+    from arouse.inference import InferenceEngine, SamplingParams
 
 
 def _model_info(a: argparse.Namespace) -> int:
@@ -26,6 +33,83 @@ def _model_info(a: argparse.Namespace) -> int:
     print(cfg.summary())
     print(json.dumps(cfg.parameter_counts(), indent=2))
     return 0
+
+
+def _model_init(a: argparse.Namespace) -> int:
+    import torch
+
+    from arouse.model.io import save_pretrained
+    from arouse.model.transformer import ArouseTransformer
+
+    cfg = ModelConfig.from_yaml(a.config)
+    tok = ArouseTokenizer.load(a.tokenizer)
+    torch.manual_seed(a.seed)
+    model = ArouseTransformer(cfg)
+    out = save_pretrained(a.out, model, tok, trained=False, notes=f"random init, seed {a.seed}")
+    print(f"{cfg.summary()}\nsaved UNTRAINED model -> {out}")
+    return 0
+
+
+def _load_engine(model_dir: str) -> InferenceEngine:
+    from arouse.inference import InferenceEngine
+
+    return InferenceEngine.from_pretrained(model_dir)
+
+
+def _sampling(a: argparse.Namespace) -> SamplingParams:
+    from arouse.inference import SamplingParams
+
+    return SamplingParams(max_new_tokens=a.max_tokens, temperature=a.temperature, top_k=a.top_k, top_p=a.top_p, seed=a.seed)
+
+
+def _chat(a: argparse.Namespace) -> int:
+    from arouse.inference import Message
+
+    engine = _load_engine(a.model)
+    info = engine.info()
+    print(f"Arouse chat - {info['name']} ({'trained' if info['trained'] else 'UNTRAINED: random weights'}). Ctrl+D to exit.")
+    history: list[Message] = [Message("system", a.system)] if a.system else []
+    params = _sampling(a)
+    while True:
+        try:
+            text = input("\nyou> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+        if not text:
+            continue
+        history.append(Message("user", text))
+        print("arouse> ", end="", flush=True)
+        reply = []
+        for ev in engine.stream(engine.chat_prompt(history, params), params):
+            print(ev.text, end="", flush=True)
+            reply.append(ev.text)
+        print()
+        history.append(Message("assistant", "".join(reply)))
+
+
+def _serve(a: argparse.Namespace) -> int:
+    from arouse.api.server import make_server
+
+    engine = _load_engine(a.model)
+    srv = make_server(engine, a.host, a.port, verbose=a.verbose)
+    info = engine.info()
+    print(f"Arouse API: {info['name']} ({'trained' if info['trained'] else 'UNTRAINED'}) on http://{a.host}:{srv.server_port}")
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        srv.server_close()
+    return 0
+
+
+def _add_sampling_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--max-tokens", type=int, default=200)
+    p.add_argument("--temperature", type=float, default=0.8)
+    p.add_argument("--top-k", type=int, default=0)
+    p.add_argument("--top-p", type=float, default=0.95)
+    p.add_argument("--seed", type=int, default=None)
 
 
 def _tok_train(a: argparse.Namespace) -> int:
@@ -82,6 +166,25 @@ def build_parser() -> argparse.ArgumentParser:
     info = model.add_parser("info", help="show architecture + parameter count")
     info.add_argument("--config", default="configs/model.yaml")
     info.set_defaults(fn=_model_info)
+    init = model.add_parser("init", help="save a randomly initialised model (for pipeline/UI testing)")
+    init.add_argument("--config", required=True)
+    init.add_argument("--tokenizer", required=True)
+    init.add_argument("--out", required=True)
+    init.add_argument("--seed", type=int, default=0)
+    init.set_defaults(fn=_model_init)
+
+    chat = sub.add_parser("chat", help="interactive terminal chat")
+    chat.add_argument("--model", required=True, help="model directory")
+    chat.add_argument("--system", default="")
+    _add_sampling_args(chat)
+    chat.set_defaults(fn=_chat)
+
+    serve = sub.add_parser("serve", help="local HTTP API + chat UI")
+    serve.add_argument("--model", required=True, help="model directory")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    serve.add_argument("-v", "--verbose", action="store_true")
+    serve.set_defaults(fn=_serve)
 
     tok = sub.add_parser("tokenizer").add_subparsers(dest="cmd", required=True)
     tr = tok.add_parser("train", help="train a tokenizer from a YAML config")

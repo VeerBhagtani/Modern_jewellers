@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arouse Chat</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #16181d; --muted: #6b7280; --border: #e3e6eb;
+    --accent: #3b5bdb; --accent-text: #ffffff; --user: #3b5bdb; --user-text: #ffffff;
+    --bot: #ffffff; --chip: #eef1f6; --warn-bg: #fff4e0; --warn: #9a5b00; --ok-bg: #e6f6ec; --ok: #1b7a3d;
+    --err-bg: #fdecec; --err: #b42318;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --panel: #171a21; --text: #e7e9ee; --muted: #9aa3b2; --border: #262b35;
+      --accent: #5c7cfa; --user: #3b5bdb; --bot: #1c2029; --chip: #262b35;
+      --warn-bg: #3a2a0f; --warn: #f5b454; --ok-bg: #0f2d1b; --ok: #5fd08a; --err-bg: #3a1414; --err: #ff8a80;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  .brand { font-weight: 700; letter-spacing: .2px; }
+  .status {
+    font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: var(--chip); color: var(--muted);
+    min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .status.warn { background: var(--warn-bg); color: var(--warn); }
+  .status.ok { background: var(--ok-bg); color: var(--ok); }
+  .status.err { background: var(--err-bg); color: var(--err); }
+  .spacer { flex: 1; }
+  button {
+    font: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); border-radius: 8px; padding: 6px 12px; white-space: nowrap;
+  }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  #settings {
+    display: none; gap: 16px; flex-wrap: wrap; padding: 10px 16px;
+    background: var(--panel); border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted);
+  }
+  #settings.open { display: flex; }
+  #settings label { display: flex; flex-direction: column; gap: 4px; }
+  #settings input { width: 110px; font: inherit; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+  #settings textarea { width: min(520px, 90vw); height: 54px; font: inherit; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); resize: vertical; }
+  main { flex: 1; overflow-y: auto; }
+  #log { max-width: 820px; margin: 0 auto; padding: 20px 16px 8px; display: flex; flex-direction: column; gap: 12px; }
+  .empty { text-align: center; color: var(--muted); margin-top: 18vh; }
+  .empty h1 { font-size: 22px; color: var(--text); margin: 0 0 6px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--user); color: var(--user-text); border-bottom-right-radius: 4px; }
+  .msg.assistant { align-self: flex-start; background: var(--bot); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg.error { align-self: center; background: var(--err-bg); color: var(--err); font-size: 13.5px; }
+  .tok { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--chip); color: var(--muted); border-radius: 4px; padding: 0 4px; }
+  .meta { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .cursor::after { content: "▍"; animation: blink 1s steps(1) infinite; color: var(--muted); }
+  @keyframes blink { 50% { opacity: 0; } }
+  footer { background: var(--panel); border-top: 1px solid var(--border); padding: 12px 16px; }
+  .composer { max-width: 820px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end; }
+  #input {
+    flex: 1; resize: none; max-height: 180px; min-height: 42px; padding: 10px 12px; font: inherit;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text);
+  }
+  #input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .note { max-width: 820px; margin: 6px auto 0; font-size: 11.5px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">Arouse</span>
+  <span id="status" class="status">connecting…</span>
+  <span class="spacer"></span>
+  <button id="settingsBtn" type="button">Settings</button>
+  <button id="newBtn" type="button">New chat</button>
+</header>
+<div id="settings">
+  <label>Temperature <input id="temperature" type="number" min="0" max="2" step="0.1" value="0.8"></label>
+  <label>Max tokens <input id="maxTokens" type="number" min="1" max="2048" step="1" value="200"></label>
+  <label>Top-p <input id="topP" type="number" min="0.05" max="1" step="0.05" value="0.95"></label>
+  <label>Top-k (0 = off) <input id="topK" type="number" min="0" step="1" value="0"></label>
+  <label>System prompt <textarea id="system" placeholder="Optional"></textarea></label>
+</div>
+<main id="scroller">
+  <div id="log">
+    <div class="empty" id="empty">
+      <h1>Arouse</h1>
+      <div>Runs locally on Arouse's own weights. No external AI service.</div>
+    </div>
+  </div>
+</main>
+<footer>
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="Message Arouse…" title="Enter to send · Shift+Enter for a new line"></textarea>
+    <button id="sendBtn" class="primary" type="button">Send</button>
+    <button id="stopBtn" type="button" hidden>Stop</button>
+  </div>
+  <div class="note" id="note"></div>
+</footer>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const log = $("log"), input = $("input"), sendBtn = $("sendBtn"), stopBtn = $("stopBtn");
+  const history = [];
+  let controller = null;
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  // Arouse's own structural tokens (<|plan|>, <|tool_call|>, ...) show as chips.
+  // User text is always literal: the server never treats it as control tokens either.
+  function render(text, role) {
+    const safe = escapeHtml(text);
+    return role === "assistant" ? safe.replace(/&lt;\|([a-z_0-9]+)\|&gt;/g, '<span class="tok">$1</span>') : safe;
+  }
+  function scrollDown() { const s = $("scroller"); s.scrollTop = s.scrollHeight; }
+  function addBubble(role, text) {
+    $("empty")?.remove();
+    const el = document.createElement("div");
+    el.className = "msg " + role;
+    el.innerHTML = render(text, role);
+    log.appendChild(el);
+    scrollDown();
+    return el;
+  }
+  function setBusy(busy) {
+    sendBtn.hidden = busy; stopBtn.hidden = !busy; input.disabled = busy;
+    if (!busy) input.focus();
+  }
+
+  async function loadStatus() {
+    const st = $("status");
+    try {
+      const r = await fetch("/v1/health");
+      const h = await r.json();
+      const m = h.model;
+      const size = m.num_parameters >= 1e6 ? (m.num_parameters / 1e6).toFixed(1) + "M" : (m.num_parameters / 1e3).toFixed(0) + "K";
+      if (m.trained) {
+        st.className = "status ok";
+        st.textContent = `${m.name} · ${size} params · trained ${m.train_steps} steps`;
+        $("note").textContent = "Local model, own weights. Check important outputs.";
+      } else {
+        st.className = "status warn";
+        st.textContent = `${m.name} · ${size} params · UNTRAINED`;
+        $("note").textContent = "This model has random weights, so replies will be noise until it is trained.";
+      }
+    } catch (e) {
+      st.className = "status err";
+      st.textContent = "server offline";
+    }
+  }
+
+  function params() {
+    return {
+      temperature: Number($("temperature").value),
+      max_tokens: Math.max(1, Math.floor(Number($("maxTokens").value))),
+      top_p: Number($("topP").value),
+      top_k: Math.max(0, Math.floor(Number($("topK").value))),
+    };
+  }
+
+  async function send() {
+    const text = input.value.trim();
+    if (!text || controller) return;
+    input.value = ""; autosize();
+    addBubble("user", text);
+    history.push({ role: "user", content: text });
+
+    const sys = $("system").value.trim();
+    const messages = (sys ? [{ role: "system", content: sys }] : []).concat(history);
+    const bubble = addBubble("assistant", "");
+    bubble.classList.add("cursor");
+    let reply = "", meta = "";
+    controller = new AbortController();
+    setBusy(true);
+    try {
+      const r = await fetch("/v1/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages, stream: true, ...params() }),
+        signal: controller.signal,
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${r.status}`);
+      }
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n\n")) >= 0) {
+          const line = buf.slice(0, i); buf = buf.slice(i + 2);
+          if (!line.startsWith("data: ")) continue;
+          const ev = JSON.parse(line.slice(6));
+          if (ev.delta) { reply += ev.delta; bubble.innerHTML = render(reply, "assistant"); scrollDown(); }
+          if (ev.done) meta = `${ev.usage.completion_tokens} tokens · ${ev.finish_reason}`;
+        }
+      }
+    } catch (e) {
+      if (e.name === "AbortError") meta = "stopped";
+      else addBubble("error", "Error: " + e.message);
+    } finally {
+      bubble.classList.remove("cursor");
+      if (!reply) bubble.innerHTML = '<span class="meta">(empty reply)</span>';
+      if (meta) bubble.insertAdjacentHTML("beforeend", `<div class="meta">${escapeHtml(meta)}</div>`);
+      if (reply) history.push({ role: "assistant", content: reply });
+      controller = null;
+      setBusy(false);
+    }
+  }
+
+  function autosize() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 180) + "px"; }
+  input.addEventListener("input", autosize);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+  sendBtn.addEventListener("click", send);
+  stopBtn.addEventListener("click", () => controller?.abort());
+  $("settingsBtn").addEventListener("click", () => $("settings").classList.toggle("open"));
+  $("newBtn").addEventListener("click", () => {
+    controller?.abort();
+    history.length = 0;
+    log.innerHTML = '<div class="empty" id="empty"><h1>Arouse</h1><div>New conversation.</div></div>';
+    input.focus();
+  });
+  loadStatus();
+  input.focus();
+})();
+</script>
+</body>
+</html>
