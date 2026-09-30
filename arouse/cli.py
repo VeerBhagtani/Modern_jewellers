@@ -2,6 +2,7 @@
 
     arouse model info --config configs/model.yaml
     arouse model init --config configs/model_tiny.yaml --tokenizer DIR --out DIR   (random weights)
+    arouse model export --model CHECKPOINT_OR_RUN_DIR --out DIR                     (weights only, for release)
     arouse data prepare --config configs/data_tiny.yaml
     arouse train --config configs/train_tiny.yaml [--max-steps N]   (auto-resumes)
     arouse agent --model DIR                    terminal agent with sandbox tools
@@ -51,6 +52,16 @@ def _model_init(a: argparse.Namespace) -> int:
     model = ArouseTransformer(cfg)
     out = save_pretrained(a.out, model, tok, trained=False, notes=f"random init, seed {a.seed}")
     print(f"{cfg.summary()}\nsaved UNTRAINED model -> {out}")
+    return 0
+
+
+def _model_export(a: argparse.Namespace) -> int:
+    from arouse.model.io import load_pretrained, save_pretrained
+
+    model, tok, meta = load_pretrained(a.model)
+    out = save_pretrained(a.out, model, tok, trained=bool(meta.get("trained")), train_steps=int(meta.get("train_steps", 0)),
+                          notes=a.notes or meta.get("notes", ""))
+    print(f"exported {model.config.name} ({model.num_parameters():,} params, {meta.get('train_steps', 0)} steps) -> {out}")
     return 0
 
 
@@ -251,6 +262,11 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--out", required=True)
     init.add_argument("--seed", type=int, default=0)
     init.set_defaults(fn=_model_init)
+    export = model.add_parser("export", help="copy a trained checkpoint to a clean model directory")
+    export.add_argument("--model", required=True, help="checkpoint dir or training run dir (uses LATEST)")
+    export.add_argument("--out", required=True)
+    export.add_argument("--notes", default="")
+    export.set_defaults(fn=_model_export)
 
     data = sub.add_parser("data").add_subparsers(dest="cmd", required=True)
     prep = data.add_parser("prepare", help="clean, dedup, split, tokenize and pack a dataset")
