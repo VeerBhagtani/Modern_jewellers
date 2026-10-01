@@ -9,6 +9,23 @@ const dir = req.model_dir;
 const cfg = JSON.parse(fs.readFileSync(path.join(dir, "config.json"), "utf8"));
 const tok = new Arouse.Tokenizer(JSON.parse(fs.readFileSync(path.join(dir, "tokenizer.json"), "utf8")));
 const out = {};
+if (fs.existsSync(path.join(dir, "knowledge.json"))) Arouse.setKnowledge(JSON.parse(fs.readFileSync(path.join(dir, "knowledge.json"), "utf8")));
+const at0 = (s) => { const [d, t] = s.split("T"); const [y, mo, dd] = d.split("-").map(Number); const [h, mi] = t.split(":").map(Number); return new Date(y, mo - 1, dd, h, mi); };
+if (req.replay) { // run every gold tool call of each episode through the JS sandbox
+  out.replay = req.replay.map((ep) => {
+    const sb = new Arouse.Sandbox({ reminders: ep.reminders, files: ep.files, failures: ep.failures });
+    sb.now = () => at0(ep.now);
+    const results = [];
+    for (const ev of ep.events) {
+      if (ev.type === "arouse" && ev.turn.action.type === "tool_call") {
+        const [ok, payload] = sb.execute(ev.turn.action.tool, ev.turn.action.arguments);
+        results.push({ type: ok ? "tool_result" : "tool_error", content: payload });
+      }
+    }
+    return results;
+  });
+}
+if (req.kb) out.kb = req.kb.map((q) => Arouse.kbSearch(q));
 
 if (req.tokenize) out.tokenize = req.tokenize.map((t) => tok.encode(t));
 if (req.answers) out.answers = req.answers.map((evs) => Arouse.answerFromResult(evs));

@@ -22,6 +22,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from arouse.agent.answers import answer_from_result
 from arouse.agent.episode import turn_from_event
 from arouse.agent.runtime import AgentRuntime, last_observation
 from arouse.agent.synth import episode_header, episode_sandbox
@@ -139,9 +140,22 @@ def gold_first_request(ep: dict[str, Any]) -> tuple[list[dict[str, Any]], Action
     raise ValueError(f"episode {ep['id']} has no terminal action")
 
 
+def gold_answer_from_tool(ep: dict[str, Any]) -> bool:
+    """True if the first request's gold final answer states a tool result (GST figures, a knowledge
+    base answer, a lead list, a created reminder...), so its exact text can be checked."""
+    first_user = next(i for i, e in enumerate(ep["events"]) if e["type"] == "user")
+    for i in range(first_user + 1, len(ep["events"])):
+        ev = ep["events"][i]
+        if ev["type"] == "arouse" and turn_from_event(ev).action.is_terminal:
+            a = turn_from_event(ev).action
+            return a.type == "finish" and answer_from_result(ep["events"][:i]) == a.result
+    return False
+
+
 def eval_end_to_end(runtime: AgentRuntime, episodes: list[dict[str, Any]], limit: int | None = None) -> dict[str, Any]:
-    n = ok = type_ok = state_ok = guarded = invalid = 0
+    n = ok = type_ok = state_ok = guarded = invalid = checked = answer_ok = 0
     by_cat: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    by_cat_answer: dict[str, list[int]] = defaultdict(lambda: [0, 0])
     failures = []
     for ep in episodes[:limit]:
         prefix, gold_final, gold_state = gold_first_request(ep)
@@ -155,6 +169,12 @@ def eval_end_to_end(runtime: AgentRuntime, episodes: list[dict[str, Any]], limit
             continue
         t = res.final.type == gold_final.type
         s = sb.snapshot() == gold_state
+        if gold_answer_from_tool(ep):
+            checked += 1
+            right = t and s and res.final.result == gold_final.result
+            answer_ok += right
+            by_cat_answer[ep["category"].split("+")[0]][0] += right
+            by_cat_answer[ep["category"].split("+")[0]][1] += 1
         n += 1
         type_ok += t
         state_ok += s
@@ -175,8 +195,51 @@ def eval_end_to_end(runtime: AgentRuntime, episodes: list[dict[str, Any]], limit
         "guard_interventions": guarded,
         "episodes_with_invalid_output": invalid,
         "by_category": {k: {"success": _pct(*v), "n": v[1]} for k, v in sorted(by_cat.items())},
+        # episodes whose gold answer states a tool result: the exact answer text must match too
+        "answer_correct_rate": _pct(answer_ok, checked),
+        "answer_checked": checked,
+        "answer_by_category": {k: {"correct": _pct(*v), "n": v[1]} for k, v in sorted(by_cat_answer.items())},
         "failures": failures,
     }
+
+
+def eval_conversations(runtime: AgentRuntime, episodes: list[dict[str, Any]], limit: int | None = None) -> dict[str, Any]:
+    """Whole conversations: feed the episode's user messages one by one (after each of Arouse's
+    final actions), keeping Arouse's own history. Success = every reply has the gold action type,
+    every tool-based answer is exactly right, and the final reminders and notes match."""
+    n = ok = 0
+    by_cat: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    failures = []
+    for ep in episodes[:limit]:
+        evs, sb, header = ep["events"], episode_sandbox(ep), episode_header(ep)
+        history: list[dict[str, Any]] = []
+        good, why = True, ""
+        for i, ev in enumerate(evs):
+            if ev["type"] != "user":
+                continue
+            j = next(k for k in range(i + 1, len(evs)) if evs[k]["type"] == "arouse" and turn_from_event(evs[k]).action.is_terminal)
+            gold = turn_from_event(evs[j]).action
+            history.append(ev)
+            try:
+                res = runtime.run(header, history, sb.execute)
+            except Exception as e:  # a crash is a failed conversation
+                good, why = False, repr(e)[:120]
+                break
+            history += res.events
+            tool_answer = gold.type == "finish" and answer_from_result(evs[:j]) == gold.result
+            if res.final.type != gold.type or (tool_answer and res.final.result != gold.result):
+                good, why = False, f"after '{ev['content'][:60]}': got {res.final.to_dict()}"[:240]
+                break
+        good = good and sb.snapshot() == ep["final_state"]
+        n += 1
+        ok += good
+        for cat in set(ep["category"].split("+")):
+            by_cat[cat][0] += good
+            by_cat[cat][1] += 1
+        if not good and len(failures) < 25:
+            failures.append({"episode": ep["id"], "category": ep["category"], "why": why or "final state differs"})
+    return {"episodes": n, "conversation_success_rate": _pct(ok, n),
+            "by_category": {k: {"success": _pct(*v), "n": v[1]} for k, v in sorted(by_cat.items())}, "failures": failures}
 
 
 def run_benchmark(model_dir: str, bench_file: str, *, decision_limit: int | None = None,
@@ -192,6 +255,7 @@ def run_benchmark(model_dir: str, bench_file: str, *, decision_limit: int | None
         "decisions": eval_decisions(runtime, eps, decision_limit, mode="raw"),
         "decisions_system": eval_decisions(runtime, eps, decision_limit, mode="system"),
         "end_to_end": eval_end_to_end(runtime, eps, e2e_limit),
+        "conversations": eval_conversations(runtime, eps, e2e_limit),
     }
     report["seconds"] = round(time.perf_counter() - t0, 1)
     return report
@@ -215,5 +279,10 @@ def summary_lines(report: dict[str, Any]) -> list[str]:
     out = [f"{'metric':<46} {'raw model':>10} {'system':>10}"]
     out += [f"{k:<46} {fmt(a):>10} {fmt(b):>10}" for k, a, b in rows]
     out.append(f"{'End-to-end task success (system)':<46} {'':>10} {fmt(e['task_success_rate']):>10}  (n={e['episodes']})")
+    if "conversations" in report:
+        c = report["conversations"]
+        out.append(f"{'Whole conversations right (system)':<46} {'':>10} {fmt(c['conversation_success_rate']):>10}  (n={c['episodes']})")
+    if e.get("answer_checked"):
+        out.append(f"{'Answer exactly right (tool-based answers)':<46} {'':>10} {fmt(e['answer_correct_rate']):>10}  (n={e['answer_checked']})")
     out.append("By skill (raw): " + ", ".join(f"{k} {v['accuracy']}% (n={v['n']})" for k, v in d["by_skill"].items()))
     return out

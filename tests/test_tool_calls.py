@@ -14,7 +14,8 @@ def sb(**kw):
 
 
 def test_registry_names():
-    assert REGISTRY.names() == ["scheduler.create", "scheduler.list", "scheduler.delete", "notes.create", "file.read", "file.list"]
+    assert REGISTRY.names() == ["scheduler.create", "scheduler.list", "scheduler.delete", "notes.create", "file.read", "file.list",
+                                "kb.search", "gst.calculate", "leads.find"]
 
 
 def test_one_time_create():

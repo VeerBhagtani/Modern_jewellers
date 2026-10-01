@@ -15,7 +15,7 @@ from typing import Any
 from arouse.agent.context import WEEKDAYS
 from arouse.protocol import Action
 
-_COPY_FIELDS = {"scheduler.create": "task", "notes.create": "text"}
+_COPY_FIELDS = {"scheduler.create": "task", "notes.create": "text", "kb.search": "query", "leads.find": "query"}
 _WORD = re.compile(r"[\w'’-]+|[^\w\s]")
 _MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
            "november", "december"]
@@ -96,6 +96,11 @@ def grounding_issue(action: Action, events: list[dict[str, Any]]) -> str | None:
     field = _COPY_FIELDS.get(action.tool)
     if field and field in action.arguments and not copied_from(action.arguments[field], said):
         return f"{field} '{action.arguments[field]}' is not a phrase the user said"
+    if action.tool == "gst.calculate":  # amount and rate are copied from the user's words, never invented
+        for key in ("amount", "rate"):
+            v = str(action.arguments.get(key, "")).strip().lower()
+            if not v or not any(v in m.lower() for m in said):
+                return f"{key} '{v}' is not something the user wrote"
     if action.tool == "file.read":
         path = action.arguments.get("path", "")
         listed = {f for ev in req if ev["type"] == "tool_result" for f in ev["content"].get("files", [])}
@@ -107,8 +112,18 @@ def grounding_issue(action: Action, events: list[dict[str, Any]]) -> str | None:
 _ANSWER_WORD = re.compile(r"[a-z0-9][a-z0-9_.:'-]*[a-z0-9]|[a-z0-9]", re.I)
 
 
+_GROUPED = re.compile(r"(?<=\d),(?=\d)")
+_TRAILING_ZEROS = re.compile(r"(\d+)\.(\d*?)0+(?!\d)")
+
+
+def normalize_numbers(text: str) -> str:
+    """'₹1,374.10' and the tool's 1374.1 must compare equal: drop digit grouping and trailing decimal zeros."""
+    text = _GROUPED.sub("", text)
+    return _TRAILING_ZEROS.sub(lambda m: m.group(1) + ("." + m.group(2) if m.group(2) else ""), text)
+
+
 def answer_words(text: str) -> list[str]:
-    return [w.lower() for w in _ANSWER_WORD.findall(text)]
+    return [w.lower() for w in _ANSWER_WORD.findall(normalize_numbers(text))]
 
 
 @lru_cache(maxsize=1)
@@ -133,7 +148,7 @@ def answer_issue(action: Action, events: list[dict[str, Any]]) -> str | None:
         elif ev["type"] == "arouse" and ev["turn"]["action"]["type"] == "tool_call":
             sources.append(json.dumps(ev["turn"]["action"]["arguments"]))
     seen = {w for src in sources for w in answer_words(src)}
-    blob = " ".join(sources).lower()
+    blob = normalize_numbers(" ".join(sources)).lower()
     vocab = response_vocab()
     unknown = [w for w in answer_words(text)
                if w not in vocab and w not in seen and not re.fullmatch(r"\d{1,3}(st|nd|rd|th)?", w)  # counts, ordinals

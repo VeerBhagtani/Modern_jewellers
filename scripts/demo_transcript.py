@@ -16,6 +16,7 @@ from arouse.agent.context import build_context
 from arouse.agent.episode import Header
 from arouse.agent.runtime import AgentRuntime
 from arouse.agent.tools import REGISTRY, Sandbox
+from arouse.agent.business import sample_customers
 from arouse.api.agent_service import DEMO_FILES
 from arouse.inference import InferenceEngine
 
@@ -39,6 +40,15 @@ CONVERSATION = [
     "Please jot down: the market is closed on Sunday.",
     "Delete my reminder to order spare pump parts.",
     "What is the capital of France?",
+    "What is the GST on gold?",
+    "Calculate GST on 2.5 lakh at 3%.",
+    "How much GST on 1180?",
+    "18%",
+    "Find me leads",
+    "2",
+    "Find me more leads",
+    "none of these",
+    "customers in Pune who like gold",
     "thanks",
 ]
 
@@ -51,7 +61,7 @@ def main() -> None:
     engine = InferenceEngine.from_pretrained(a.model)
     info = engine.info()
     rt = AgentRuntime(engine, REGISTRY)
-    sb = Sandbox(NOW, DEMO_FILES)
+    sb = Sandbox(NOW, {**DEMO_FILES, "customers.csv": sample_customers(NOW)})
     header = Header(context=build_context(NOW, "Asia/Kolkata"), tools=REGISTRY.names())
     events: list[dict] = []
     lines = [

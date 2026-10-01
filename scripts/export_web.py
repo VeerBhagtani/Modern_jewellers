@@ -5,6 +5,7 @@
     web/model/weights.bin     all weights as float16, little-endian, in table order
     web/model/tokenizer.json  special tokens + BPE merges (the exact tokenizer the model was trained with)
     web/model/response_vocab.txt
+    web/model/knowledge.json  the knowledge base + its search word lists
 
 Usage: python scripts/export_web.py --model models/arouse-agent-s --out web/model
 """
@@ -18,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 
+from arouse.agent import business, knowledge
 from arouse.model.io import load_pretrained
 
 
@@ -60,6 +62,11 @@ def main() -> None:
                 "fingerprint": tok.fingerprint()}
     (out / "tokenizer.json").write_text(json.dumps(tok_spec, separators=(",", ":")) + "\n", encoding="utf-8")
     shutil.copy(Path("arouse/agent/response_vocab.txt"), out / "response_vocab.txt")
+    # the knowledge base plus the exact word lists its search uses (web/arouse.js reads them from here)
+    kb = json.loads(Path("arouse/agent/knowledge.json").read_text(encoding="utf-8"))
+    kb["search"] = {"stopwords": sorted(knowledge.STOPWORDS), "synonyms": knowledge.SYNONYMS, "no_stem": sorted(knowledge.NO_STEM),
+                    "lead_stopwords": sorted(business.LEAD_STOPWORDS)}
+    (out / "knowledge.json").write_text(json.dumps(kb, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
     print(f"exported {cfg.name}: {weights.size:,} weights ({weights.nbytes / 1e6:.1f} MB fp16) -> {out}")
 
 

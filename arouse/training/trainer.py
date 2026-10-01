@@ -112,8 +112,13 @@ class Trainer:
 
     def _init_from(self) -> None:
         model, tok, meta = load_pretrained(self.cfg.init_from, device=self.device)
-        if model.config.to_dict() != self.model_cfg.to_dict():
+        old, new = model.config.to_dict(), self.model_cfg.to_dict()
+        # The context length is not part of the weights (RoPE positions are computed, not learned),
+        # so a model may be fine-tuned at a longer context.
+        if {**old, "context_length": 0} != {**new, "context_length": 0}:
             raise ConfigError("init_from model has a different architecture than model_config")
+        if old["context_length"] != new["context_length"]:
+            self.log(f"context length {old['context_length']} -> {new['context_length']} (weights unchanged)")
         if tok.fingerprint() != self.tokenizer.fingerprint():
             raise ConfigError("init_from model uses a different tokenizer than the prepared data")
         self.model.load_state_dict(model.state_dict())

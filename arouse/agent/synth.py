@@ -12,7 +12,11 @@ import random
 from datetime import datetime, timedelta
 from typing import Any, Callable
 
-from arouse.agent.answers import created_msg, list_msg, ordinal, rule_words  # noqa: F401
+from arouse.agent.answers import (LEADS_ASK, LEADS_OWN, Q_GST_RATE, R_NO_CUSTOMERS, R_UNKNOWN, created_msg,  # noqa: F401
+                                  gst_msg, leads_msg, list_msg, ordinal, rule_words)
+from arouse.agent.business import CUSTOMER_COLUMNS, CUSTOMER_FILE, parse_csv
+from arouse.agent.constraints import _STOP_ALL, label_end
+from arouse.agent.knowledge import load as load_knowledge
 from arouse.agent.context import DAY_CODES, WEEKDAYS, build_context, fmt_dt, next_weekday_date
 from arouse.agent.episode import Header
 from arouse.agent.tools import REGISTRY, Reminder, Sandbox
@@ -188,16 +192,117 @@ def oos_question(rng: random.Random) -> str:
     ])
 
 
+# --- v4: questions, GST and leads -----------------------------------------------------------
+
+def oos_request(rng: random.Random) -> str:
+    """Something Arouse cannot do (not a question it could look up): refuse politely."""
+    return rng.choice([
+        f"tell me a {rng.choice(_OOS_KINDS)}", f"tell me a {rng.choice(_OOS_KINDS)} about {rng.choice(_OOS_TOPICS)}",
+        f"write a {rng.choice(_OOS_KINDS)} about {rng.choice(_OOS_TOPICS)}",
+        f"translate {rng.choice(_OOS_WORDS)} into {rng.choice(_OOS_LANGS)}",
+        f"recommend a {rng.choice(['movie', 'book', 'song', 'restaurant', 'game'])}",
+        f"write code to {rng.choice(['sort a list', 'reverse a string', 'parse a CSV', 'build a website'])}",
+        f"sing me a {rng.choice(['song', 'lullaby'])}", f"book a {rng.choice(['flight', 'taxi', 'hotel', 'table'])} for me",
+        f"order a {rng.choice(['pizza', 'cab', 'phone'])}", f"draw a picture of {rng.choice(_OOS_TOPICS)}",
+        f"play some {rng.choice(['music', 'songs'])}", f"solve {rng.randint(2, 9)}x + {rng.randint(1, 20)} = {rng.randint(21, 60)}",
+    ])
+
+
+def unknown_question(rng: random.Random) -> str:
+    """A general question outside Arouse's knowledge base: it looks it up and says it doesn't know."""
+    a, b = rng.randint(2, 99), rng.randint(2, 99)
+    return rng.choice([
+        f"what is the {rng.choice(_OOS_ATTR)} of {rng.choice(_OOS_PLACES)}?",
+        f"what is {a} {rng.choice(['times', 'plus', 'minus', 'divided by'])} {b}?",
+        f"explain {rng.choice(_OOS_EXPLAIN)}", f"how do I {rng.choice(_OOS_HOW)}?",
+        f"what's the weather in {rng.choice(_OOS_PLACES)}?", f"who won the {rng.choice(['football', 'cricket', 'tennis'])} match?",
+        f"how far is {rng.choice(_OOS_PLACES)} from {rng.choice(_OOS_PLACES)}?", f"define {rng.choice(_OOS_EXPLAIN)}",
+        f"what's the news about {rng.choice(_OOS_PLACES)}?", f"who invented {rng.choice(['the telephone', 'paper', 'the radio'])}?",
+        f"what is the price of {rng.choice(['petrol', 'bitcoin', 'onions', 'the dollar', 'diesel', 'tomatoes'])}?",
+        f"who is the {rng.choice(['prime minister', 'president', 'chief minister'])} of {rng.choice(_OOS_PLACES)}?",
+        f"how tall is {rng.choice(['Mount Everest', 'the Eiffel Tower', 'a giraffe'])}?",
+        f"what is {rng.choice(_OOS_EXPLAIN)}?", "why is the sky blue?", f"when was {rng.choice(_OOS_PLACES)} founded?",
+    ])
+
+
+# Held-out questions about knowledge-base entries: written once, never used to tune the search.
+TEST_KB_QUESTIONS = [
+    ("gst_what", "Could you tell me what GST stands for?"), ("gst_rates", "What percentage rates does GST use these days?"),
+    ("gst_gold", "If I buy a gold ring, what GST applies?"), ("gst_making", "Do making charges attract GST?"),
+    ("gst_milk", "Does milk have any GST?"), ("gst_ghee", "What GST applies on cheese?"),
+    ("gst_split", "When do I charge IGST instead of CGST and SGST?"), ("gst_registration", "What turnover needs GST registration?"),
+    ("gst_composition", "Who can opt for the composition scheme?"), ("gstin", "What is the structure of a GSTIN?"),
+    ("gst_itc", "Explain input tax credit to me"), ("gstr1", "What is the deadline for GSTR-1?"),
+    ("gstr3b", "When is GSTR-3B due?"), ("gst_late_fee", "How much is the late fee for GSTR-3B?"),
+    ("eway_bill", "Above what value do I need an e-way bill?"), ("e_invoice", "Do I need to issue e-invoices?"),
+    ("karat", "What does karat mean for gold?"), ("gold_916", "Why is gold called 916?"),
+    ("huid", "What is the 6-character HUID?"), ("hallmark_check", "How can I check the HUID of my jewellery?"),
+    ("making_charges", "What exactly are making charges?"), ("gold_rate", "What's the price of gold per 10 grams?"),
+    ("tola", "How much does one tola weigh?"), ("sterling", "Is 925 silver pure?"),
+    ("fat_snf", "What is SNF in milk?"), ("cow_buffalo_fat", "Does buffalo milk have more fat than cow milk?"),
+    ("lead", "What does the word lead mean in business?"), ("margin", "What is the profit margin formula?"),
+    ("markup", "How do I work out markup?"), ("break_even", "How can I calculate my break-even point?"),
+    ("pan", "Why do I need a PAN?"), ("udyam", "What is Udyam?"), ("lakh_crore", "How many lakh make a crore?"),
+]
+TEST_UNKNOWN = ["what's the population of Mumbai?", "what's the stock price of Tata Motors?", "who wrote the Ramayana?",
+                "what is the boiling point of water?", "how many players are in a cricket team?", "what is the speed of light?"]
+TEST_REQUESTS = ["tell me a story", "solve 2x + 3 = 11", "write me a song about Diwali", "book a train ticket to Jaipur"]
+
+TRAIN_CITIES = ["Pune", "Delhi", "Jaipur", "Surat", "Ahmedabad", "Indore", "Nagpur", "Lucknow", "Kochi", "Chennai", "Hyderabad",
+                "Bhopal", "Nashik", "Rajkot", "Vadodara", "Kanpur", "Patna", "Mysuru", "Agra", "Amritsar", "Mangaluru", "Kolhapur"]
+TEST_CITIES = ["Udaipur", "Thane", "Coimbatore", "Ludhiana", "Guwahati", "Raipur"]
+TRAIN_INTERESTS = ["gold necklace", "gold chain", "diamond ring", "silver anklet", "gold bangles", "earrings", "mangalsutra",
+                   "nose pin", "pendant", "bridal set", "gold coins", "silver coins", "ghee", "paneer", "milk delivery", "curd",
+                   "butter", "wedding rings", "kids jewellery", "silver idols"]
+TEST_INTERESTS = ["kundan set", "platinum band", "temple jewellery", "pearl necklace"]
+FIRST = ["Asha", "Ravi", "Neha", "Arjun", "Pooja", "Vikram", "Sunita", "Rahul", "Kavya", "Manoj", "Divya", "Farhan", "Gita",
+         "Harish", "Isha", "Jaya", "Kiran", "Lakshmi", "Mohan", "Nisha", "Om", "Priya", "Rohan", "Sana", "Tara", "Uday", "Vani"]
+LAST = ["Mehta", "Shah", "Rao", "Iyer", "Patel", "Singh", "Gupta", "Nair", "Joshi", "Khan", "Das", "Reddy", "Kulkarni",
+        "Verma", "Bose", "Pillai", "Desai", "Chopra", "Menon", "Saxena"]
+TEST_FIRST = ["Bhavna", "Chirag", "Esha", "Gaurav"]
+
+LEAD_ASKS = ["Find me leads", "Find me some leads.", "I need new customers.", "Get me leads.", "Help me find leads.",
+             "Can you find leads for my business?", "I want more customers.", "Who should I contact to sell more?",
+             "Find potential customers.", "Find me clients.", "Help me get new customers.", "Look for leads.",
+             "Search for leads.", "Any leads for me?", "I need more sales, find me leads.", "find leads"]
+TEST_LEAD_ASKS = ["Could you dig up some leads for me?", "Bring me some new leads.", "Who could I sell to next?"]
+PICKS = {
+    "inactive": ["1", "1st", "the first one", "first", "option 1", "number 1", "option one", "past customers", "old customers",
+                 "win back old customers", "go with 1", "1 please", "inactive customers", "the first"],
+    "occasions": ["2", "2nd", "the second one", "second", "option 2", "number 2", "option two", "birthdays", "anniversaries",
+                  "birthdays and anniversaries", "occasions", "go with 2", "the birthday one", "2 please"],
+    "top": ["3", "3rd", "the third one", "third", "option 3", "number 3", "option three", "referrals", "top customers",
+            "best customers", "go with 3", "the referral one", "3 please"],
+}
+TEST_PICKS = {"inactive": ["let's go with the first option", "try option one"],
+              "occasions": ["number two please", "do the anniversaries one"],
+              "top": ["the third option sounds good", "ask the top customers"]}
+REJECTS = ["none of these", "I don't like these", "something else", "no, I have another idea", "neither", "none", "not these",
+           "I have my own idea", "no, let me tell you my idea", "none of them"]
+TEST_REJECTS = ["I'd rather do it my way", "these don't work for me"]
+DIRECT = {
+    "inactive": ["Which customers haven't bought in a while?", "Find customers who haven't come back.", "Show me inactive customers.",
+                 "Who hasn't bought from me in 3 months?", "Find old customers to win back."],
+    "occasions": ["Which customers have birthdays coming up?", "Any customer anniversaries this month?",
+                  "Find customers with upcoming birthdays.", "Who has a birthday or anniversary soon?"],
+    "top": ["Who are my best customers?", "Show my top customers.", "Which customers spent the most?",
+            "Find my top customers for referrals."],
+}
+TEST_DIRECT = {"inactive": ["Who stopped buying from me?"], "occasions": ["List upcoming customer birthdays."],
+               "top": ["Rank my customers by spending."]}
+
+
 AUG_PREFIX = ["", "", "", "please ", "hey, ", "hi Arouse, ", "can you ", "Arouse, ", "quick one: ", "ok so "]
 AUG_SUFFIX = ["", "", "", " please", " thanks", " thank you", "!", " pls"]
 
 YES = ["yes", "yes please", "sure", "yeah", "ok, do that", "yes, do it"]
 NO = ["no", "no thanks", "never mind", "no, leave it"]
 
-CAPABILITIES = "I can set reminders, list or cancel them, take notes and read your files."
+CAPABILITIES = ("I can set reminders, take notes, read your files, answer questions about GST and business, "
+                "calculate GST and find leads.")
 R_GREET = "Hello! " + CAPABILITIES + " What would you like to do?"
 R_THANKS = "You're welcome!"
-R_HELP = CAPABILITIES + " For example: 'Remind me tomorrow at 8 AM to check sales.'"
+R_HELP = CAPABILITIES + " For example: 'Remind me tomorrow at 8 AM to check sales' or 'Find me leads'."
 R_WHO = "I'm Arouse, a task assistant. " + CAPABILITIES
 R_OUT = "I can't help with that yet. " + CAPABILITIES
 R_HOW = "I'm doing well, thanks! " + CAPABILITIES
@@ -237,6 +342,15 @@ def cap(s: str) -> str:
     return s[:1].upper() + s[1:]
 
 
+def copy_span(text: str, start: int = 0) -> str:
+    """The phrase a copied query/note takes from a message: from the start of the user's own words
+    (or after a "label: "), up to the end of the sentence. Same rules as the copy constraint."""
+    lab = label_end(text)
+    i = lab if lab is not None else start
+    m = _STOP_ALL.search(text, i)
+    return text[i:m.start() if m else len(text)].strip()
+
+
 # --- episode builder -------------------------------------------------------------------
 
 
@@ -250,6 +364,14 @@ class Builder:
 
     def user(self, text: str) -> None:
         self.events.append({"type": "user", "content": text})
+
+    def set_file(self, name: str, content: str | None) -> None:
+        """Change the starting files (before any tool ran): None removes the file."""
+        for files in (self.init["files"], self.sandbox.files):
+            if content is None:
+                files.pop(name, None)
+            else:
+                files[name] = content
 
     def act(self, action: Action, skills: list[str], plan: str | None = None, verify: str | None = None):
         self.events.append({"type": "arouse", "turn": Turn(action, plan, verify).to_dict()})
@@ -294,6 +416,9 @@ class Generator:
         self.greetings = TEST_GREETINGS if test else GREETINGS
         self.help = TEST_HELP + HELP[:1] if test else HELP
         self.oos = TEST_OUT_OF_SCOPE if test else OUT_OF_SCOPE
+        self.cities = TEST_CITIES if test else TRAIN_CITIES
+        self.interests = TEST_INTERESTS if test else TRAIN_INTERESTS
+        self.first_names = TEST_FIRST + FIRST[:6] if test else FIRST
         self.aug = random.Random(seed * 7919 + 17)  # separate stream: never perturbs the main one
 
     def task(self) -> str:
@@ -325,8 +450,10 @@ class Generator:
                 names.add(f)
         return sorted(names)
 
-    def say(self, text: str, chat: bool = False) -> None:
-        """Add a user message; in train, sometimes wrap it in a polite prefix/suffix (chit-chat: suffix only)."""
+    def say(self, text: str, chat: bool = False) -> str:
+        """Add a user message; in train, sometimes wrap it in a polite prefix/suffix (chit-chat: suffix only).
+        Returns the phrase Arouse should copy from it (see copy_span)."""
+        pre = ""
         if not self.test and self.aug.random() < 0.5:
             pre = "" if chat else self.aug.choice(AUG_PREFIX)
             suf = self.aug.choice(["", "!", " :)"] if chat else AUG_SUFFIX)
@@ -335,6 +462,7 @@ class Generator:
                 body = body[:-1]
             text = pre + body + suf
         self._b.user(text)
+        return copy_span(text, len(pre))
 
     def pick(self, train: list[str], test: list[str]) -> str:
         """Sentence template: test split uses only the held-out templates."""
@@ -723,40 +851,206 @@ class Generator:
 
     def s_chat(self) -> str:
         r = self.rng
-        if self.test:  # exact original draw order: the held-out benchmark must not change
-            kind = r.choices(["greet", "help", "who", "oos"], [3, 2, 1, 4])[0]
-            text, reply = {
-                "greet": (r.choice(self.greetings), R_GREET),
-                "help": (r.choice(self.help), R_HELP),
-                "who": (r.choice(WHO), R_WHO),
-                "oos": (r.choice(self.oos), R_OUT),
-            }[kind]
+        kinds = ["greet", "help", "who", "request", "how", "bye", "ack"]
+        kind = r.choices(kinds, [3, 2, 1, 4, 1, 1, 1] if not self.test else [3, 2, 1, 4, 0, 0, 0])[0]
+        if kind == "request":
+            text = r.choice(TEST_REQUESTS) if self.test else oos_request(r)
+            reply = R_OUT
         else:
-            kind = r.choices(["greet", "help", "who", "oos", "how", "bye", "ack"], [3, 2, 1, 8, 1, 1, 1])[0]
-            if kind == "oos":
-                banned = {t.lower() for t in TEST_OUT_OF_SCOPE} | {"tell me a story"}
-                text = r.choice(self.oos) if r.random() < 0.25 else next(
-                    q for q in iter(lambda: oos_question(r), None)
-                    if q.lower() not in banned and "mumbai" not in q.lower() and "tata" not in q.lower())
-                reply = R_OUT
-            else:
-                pool, reply = {"greet": (self.greetings, R_GREET), "help": (self.help, R_HELP), "who": (WHO, R_WHO),
-                               "how": (HOW_ARE_YOU, R_HOW), "bye": (BYE, R_BYE), "ack": (ACKS, R_ACK)}[kind]
-                text = r.choice(pool)
+            pool, reply = {"greet": (self.greetings, R_GREET), "help": (self.help, R_HELP), "who": (WHO, R_WHO),
+                           "how": (HOW_ARE_YOU, R_HOW), "bye": (BYE, R_BYE), "ack": (ACKS, R_ACK)}[kind]
+            text = r.choice(pool)
         if r.random() < 0.3:
             text = cap(text)
-        self.say(text, chat=kind != "oos")
+        self.say(text, chat=kind != "request")
         self._b.act(Action.finish(reply), ["intent"])
-        return "chat" if kind != "oos" else "out_of_scope"
+        return "chat" if kind != "request" else "out_of_scope"
+
+    # --- v4: knowledge questions, GST, leads -------------------------------------------------
+
+    def s_question(self) -> str:
+        """A question: look it up in the knowledge base and answer from the result (or say I don't know)."""
+        r, b = self.rng, self._b
+        if r.random() < 0.3:  # a general question the knowledge base does not cover
+            q = r.choice(TEST_UNKNOWN) if self.test else unknown_question(r)
+            q, cat = cap(q) if r.random() < 0.5 else q, "question_unknown"
+        else:
+            if self.test:
+                _, q = r.choice(TEST_KB_QUESTIONS)
+            else:
+                e = r.choice(load_knowledge()["entries"])
+                q = r.choice([e["q"], e["q"], *e["alts"]])
+                q = cap(q) + ("?" if not q.endswith("?") and r.random() < 0.6 else "")
+            cat = "question"
+        if self.test:
+            text = self.pick([], [q, q, f"I was wondering, {q[:1].lower() + q[1:]}"])
+        else:
+            low = q[:1].lower() + q[1:]
+            text = r.choice([q, q, q, f"Can you tell me {low}", f"I want to know {low}", f"Quick question: {low}",
+                             f"Tell me {low}", f"Do you know {low}", f"{q} Please explain."])
+        query = self.say(text)
+        ok, res = b.act(Action.tool_call("kb.search", {"query": query}), ["intent", "tool_selection", "argument_generation"],
+                        plan="Look this up in the knowledge base.")
+        answer = res["answer"] if res["found"] else R_UNKNOWN
+        b.act(Action.finish(answer), ["completion_verification"],
+              verify="kb.search found an answer." if res["found"] else "kb.search found nothing, so I must say I don't know.")
+        return cat
+
+    def amount(self) -> str:
+        r = self.rng
+        n = r.choice([r.randint(1, 99) * 100, r.randint(1, 999) * 50, r.randint(10, 9999), r.randint(1, 50) * 1000])
+        grouped = f"{n:,}" if n < 100000 else f"{n // 100000},{(n % 100000) // 1000:02d},{n % 1000:03d}"
+        kind = r.choices(["plain", "comma", "rupee", "rs", "unit", "suffix"], [4, 2, 2, 2, 2, 1])[0]
+        if kind == "plain":
+            return str(n)
+        if kind == "comma":
+            return grouped
+        if kind == "rupee":
+            return "₹" + r.choice([str(n), grouped])
+        if kind == "rs":
+            return r.choice(["Rs ", "Rs. ", "rs ", "INR "]) + r.choice([str(n), grouped])
+        if kind == "suffix":
+            return f"{r.choice([str(n), grouped])} rupees"
+        return r.choice([f"{r.randint(1, 9)} lakh", f"{r.randint(1, 9)}.5 lakh", f"{r.randint(1, 3)} crore",
+                         f"{r.randint(2, 99)}k", f"{r.randint(2, 99)} thousand", "1.2 crore", f"{r.randint(10, 99)} lakh"])
+
+    def s_gst(self) -> str:
+        r, b = self.rng, self._b
+        a = self.amount()
+        rate = r.choices(["18", "5", "3", "40", "12", "28", "0.25"], [8, 6, 5, 1, 1, 1, 1])[0]
+        kind = r.choices(["plain", "inclusive", "missing"], [6, 2, 2])[0]
+        if kind == "plain":
+            text = self.pick([f"What is {rate}% GST on {a}?", f"Calculate GST on {a} at {rate}%.", f"GST on {a} at {rate} percent",
+                              f"How much is {rate}% GST on {a}?", f"Add {rate}% GST to {a}.", f"{a} plus {rate}% GST",
+                              f"Work out {rate}% GST for {a}.", f"What's the GST on {a} if the rate is {rate}%?",
+                              f"Find the GST for {a} at {rate}%.", f"Calculate {rate}% GST on {a}.", f"GST {rate}% on {a}",
+                              f"I sold something for {a}. How much is {rate}% GST?"],
+                             [f"Compute {rate}% GST for an amount of {a}.", f"My bill is {a} and GST is {rate}%. What do I pay in tax?"])
+        elif kind == "inclusive":
+            text = self.pick([f"{a} includes {rate}% GST. How much is the GST?", f"The price {a} is inclusive of {rate}% GST. What is the base price?",
+                              f"Remove {rate}% GST from {a}.", f"How much GST is inside {a} at {rate}%?",
+                              f"{a} including {rate}% GST, what is the price before GST?", f"Split {a} into price and {rate}% GST."],
+                             [f"{a} is the price including {rate}% GST. What's the tax part?"])
+        else:
+            text = self.pick([f"Calculate GST on {a}.", f"How much GST on {a}?", f"Add GST to {a}.", f"What's the GST for {a}?",
+                              f"GST on {a}"], [f"Tell me the GST for a bill of {a}."])
+        self.say(text)
+        if kind == "missing":
+            b.act(Action.ask_user(Q_GST_RATE), ["intent", "ambiguity"], plan="The GST rate is missing, so I should ask.")
+            if r.random() < 0.25:
+                return "ambiguity"
+            b.user(r.choice([f"{rate}%", f"{rate} percent", f"use {rate}%", rate, f"{rate}% please"]))
+        args = {"amount": a, "rate": rate}
+        if kind == "inclusive":
+            args["inclusive"] = True
+        ok, res = b.act(Action.tool_call("gst.calculate", args), ["intent", "tool_selection", "argument_generation"],
+                        plan="Calculate GST with the tool.")
+        b.act(Action.finish(gst_msg(res)), ["completion_verification"], verify="gst.calculate succeeded.")
+        return "gst" if kind != "missing" else "gst_followup"
+
+    def customers(self, b: Builder) -> None:
+        """Write a customers.csv for this episode (or none at all, sometimes)."""
+        r = self.rng
+        if getattr(b, "customers_done", False):  # one customer list per episode (gold results depend on it)
+            return
+        b.customers_done = True
+        if r.random() < 0.1:
+            b.set_file(CUSTOMER_FILE, None)
+            return
+        rows, names = [",".join(CUSTOMER_COLUMNS)], set()
+        for _ in range(r.randint(5, 14)):
+            name = f"{r.choice(self.first_names)} {r.choice(LAST)}"
+            if name in names:
+                continue
+            names.add(name)
+            last = b.now.date() - timedelta(days=r.choice([r.randint(3, 80), r.randint(90, 400)]))
+            spent = r.randint(4, 600) * 500
+            spent_s = f'"{spent:,}"' if r.random() < 0.3 else str(spent)
+
+            def day(near: bool) -> str:
+                d = b.now.date() + timedelta(days=r.randint(0, 30)) if near else b.now.date() + timedelta(days=r.randint(31, 364))
+                return f"{r.randint(1960, 2005)}-{d.month:02d}-{d.day:02d}"
+
+            bday = day(r.random() < 0.2) if r.random() < 0.8 else ""
+            anniv = day(r.random() < 0.2) if r.random() < 0.5 else ""
+            rows.append(",".join([name, r.choice(self.cities), r.choice(self.interests), last.isoformat(), spent_s, bday, anniv]))
+        b.set_file(CUSTOMER_FILE, "\n".join(rows))
+
+    def city_interest(self, b: Builder) -> tuple[str, str]:
+        """Usually a real customer's city and interest (so the search finds someone), sometimes random."""
+        r = self.rng
+        rows = parse_csv(b.sandbox.files.get(CUSTOMER_FILE, ""))[1:]
+        if rows and r.random() < 0.65:
+            row = r.choice(rows)
+            return row[1], row[2]
+        return r.choice(self.cities), r.choice(self.interests)
+
+    def idea(self, b: Builder) -> str:
+        city, interest = self.city_interest(b)
+        return self.pick([f"Find customers in {city} who like {interest}", f"customers from {city}",
+                          f"people in {city} who bought {interest}", f"anyone interested in {interest}", f"{interest} buyers",
+                          f"customers who like {interest}", f"look for customers in {city}", f"find {interest} customers in {city}",
+                          f"my idea: customers in {city}", f"search for people who bought {interest}"],
+                         [f"Search for {interest} buyers in {city}", f"everyone in {city} who purchased {interest}"])
+
+    def lead_call(self, b: Builder, method: str, query: str | None, skills: list[str]) -> None:
+        args = {"method": method} if query is None else {"method": method, "query": query}
+        ok, res = b.act(Action.tool_call("leads.find", args), skills + ["tool_selection", "argument_generation"],
+                        plan=f"Find leads with the {method} method.")
+        if ok:
+            b.act(Action.finish(leads_msg(res)), ["completion_verification"], verify=f"leads.find returned {res['count']}.")
+        else:
+            b.act(Action.fail(R_NO_CUSTOMERS), ["error_recovery", "completion_verification"], verify="There is no customer list.")
+
+    def s_leads(self) -> str:
+        r, b = self.rng, self._b
+        self.customers(b)
+        kind = r.choices(["ask", "direct", "custom"], [5, 3, 2])[0]
+        if kind == "direct":
+            method = r.choice(list(DIRECT))
+            self.say(self.pick(DIRECT[method], TEST_DIRECT[method]))
+            self.lead_call(b, method, None, ["intent"])
+            return "leads_direct"
+        if kind == "custom":
+            city, interest = self.city_interest(b)
+            text = self.pick([f"Find leads in {city}.", f"Find customers who like {interest}.", f"Find me leads for {interest}.",
+                              f"Find customers in {city} interested in {interest}.", f"Get me leads from {city}."],
+                             [f"Look up {interest} buyers in {city}."])
+            query = self.say(text)
+            self.lead_call(b, "custom", query, ["intent"])
+            return "leads_custom"
+        self.say(self.pick(LEAD_ASKS, TEST_LEAD_ASKS))
+        b.act(Action.ask_user(LEADS_ASK), ["intent", "ambiguity"],
+              plan="Finding leads can be done in several ways: offer three and ask, or use the user's idea.")
+        reply = r.choices(["pick", "idea", "reject", "stop"], [6, 2, 2, 1])[0]
+        if reply == "stop":
+            return "leads_ask"
+        if reply == "pick":
+            method = r.choice(list(PICKS))
+            b.user(self.pick(PICKS[method], TEST_PICKS[method]))
+            self.lead_call(b, method, None, ["task_state"])
+            return "leads_pick"
+        if reply == "reject":
+            b.user(self.pick(REJECTS, TEST_REJECTS))
+            b.act(Action.ask_user(LEADS_OWN), ["task_state", "ambiguity"], plan="None of the three fits: ask for the user's own method.")
+            if r.random() < 0.15:
+                return "leads_ask"
+        query = copy_span(self.idea(b))
+        b.user(query if r.random() < 0.7 else cap(query) + ".")
+        query = copy_span(b.events[-1]["content"])
+        self.lead_call(b, "custom", query, ["task_state"])
+        return "leads_own_idea"
 
     TRAIN_SCENARIOS: list[tuple[str, int]] = [
-        ("s_one_time", 18), ("s_relative", 5), ("s_recurring", 10), ("s_missing_time", 14), ("s_missing_task", 4),
-        ("s_list", 5), ("s_delete", 9), ("s_note", 8), ("s_file", 10), ("s_list_files", 2), ("s_chat", 12),
+        ("s_one_time", 16), ("s_relative", 5), ("s_recurring", 9), ("s_missing_time", 12), ("s_missing_task", 4),
+        ("s_list", 5), ("s_delete", 9), ("s_note", 7), ("s_file", 8), ("s_list_files", 2), ("s_chat", 9),
+        ("s_question", 14), ("s_gst", 9), ("s_leads", 14),
     ]
 
     SCENARIOS: list[tuple[str, int]] = [
-        ("s_one_time", 16), ("s_relative", 6), ("s_recurring", 12), ("s_missing_time", 12), ("s_missing_task", 4),
-        ("s_list", 6), ("s_delete", 6), ("s_note", 5), ("s_file", 8), ("s_list_files", 2), ("s_chat", 8),
+        ("s_one_time", 12), ("s_relative", 5), ("s_recurring", 9), ("s_missing_time", 9), ("s_missing_task", 3),
+        ("s_list", 5), ("s_delete", 6), ("s_note", 5), ("s_file", 7), ("s_list_files", 2), ("s_chat", 7),
+        ("s_question", 12), ("s_gst", 8), ("s_leads", 12),
     ]
 
     def episode(self, eid: str) -> dict[str, Any]:
@@ -768,9 +1062,12 @@ class Generator:
             failures["notes.create"] = r.choice([1, 2])
         self._b = b = self.world(failures)
         names, weights = zip(*(self.SCENARIOS if self.test else self.TRAIN_SCENARIOS))
+        plan = [r.choices(names, weights)[0] for _ in range(r.choices([1, 2, 3], [70, 22, 8])[0])]
+        if "s_leads" in plan:  # the customer list is part of the starting state, before any tool runs
+            self.customers(b)
         cats = []
-        for i in range(r.choices([1, 2, 3], [70, 22, 8])[0]):
-            cats.append(getattr(self, r.choices(names, weights)[0])())
+        for i, name in enumerate(plan):
+            cats.append(getattr(self, name)())
             if i == 0 and r.random() < 0.1:
                 b.user(r.choice(THANKS))
                 b.act(Action.finish(R_THANKS), ["intent"])

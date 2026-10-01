@@ -15,6 +15,7 @@ from collections import OrderedDict
 from datetime import datetime
 from typing import Any
 
+from arouse.agent.business import sample_customers
 from arouse.agent.context import build_context
 from arouse.agent.episode import Header, validate_events
 from arouse.agent.runtime import AgentRuntime
@@ -36,7 +37,8 @@ MAX_SESSIONS = 100
 class Session:
     def __init__(self) -> None:
         self.events: list[dict[str, Any]] = []
-        self.sandbox = Sandbox(datetime.now().replace(second=0, microsecond=0), DEMO_FILES)
+        now = datetime.now().replace(second=0, microsecond=0)
+        self.sandbox = Sandbox(now, {**DEMO_FILES, "customers.csv": sample_customers(now)})
 
 
 class AgentService:

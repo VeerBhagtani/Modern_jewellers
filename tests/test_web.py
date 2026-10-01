@@ -235,3 +235,23 @@ def test_website_runs_the_model_in_the_browser():
     finally:
         srv.shutdown()
         srv.server_close()
+
+
+def test_new_tools_match_python_exactly(tmp_path):
+    """Knowledge search, GST and leads: every gold tool call replayed in the JS sandbox gives the same result."""
+    import random
+
+    from arouse.agent.knowledge import load as load_kb
+    from arouse.agent.knowledge import search
+    from arouse.agent.synth import TEST_KB_QUESTIONS, TEST_UNKNOWN, generate, unknown_question
+
+    eps = [ep for ep in generate(500, seed=61) + generate(200, seed=62, split="test")
+           if any(c.startswith(("leads", "gst", "question")) for c in ep["category"].split("+"))]
+    rng = random.Random(5)
+    queries = [q for e in load_kb()["entries"] for q in [e["q"], *e["alts"]]] + [q for _, q in TEST_KB_QUESTIONS]
+    queries += TEST_UNKNOWN + [unknown_question(rng) for _ in range(200)] + ["", "e-way bill?", "GSTR-3B", "22K vs 24K gold"]
+    js = run_js(tmp_path, replay=eps, kb=queries)
+    for ep, results in zip(eps, js["replay"], strict=True):
+        assert results == [ev for ev in ep["events"] if ev["type"] in ("tool_result", "tool_error")], ep["id"]
+    assert js["kb"] == [search(q) for q in queries]
+    assert len(eps) > 150

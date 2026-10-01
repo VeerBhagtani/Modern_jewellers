@@ -12,6 +12,8 @@ import dataclasses
 from datetime import datetime, timedelta
 from typing import Any
 
+from arouse.agent import knowledge
+from arouse.agent.business import METHODS, find_leads, gst_calculate
 from arouse.agent.context import DAY_CODES, fmt_dt
 from arouse.protocol import Param, ProtocolError, ToolRegistry, ToolSpec
 
@@ -39,6 +41,12 @@ TOOL_SPECS = [
     ToolSpec("notes.create", "Save a note.", {"text": Param("string")}),
     ToolSpec("file.read", "Read a file.", {"path": Param("string")}),
     ToolSpec("file.list", "List files.", {}),
+    ToolSpec("kb.search", "Search Arouse's built-in knowledge base (GST, gold and jewellery, dairy, small business).",
+             {"query": Param("string")}),
+    ToolSpec("gst.calculate", "Calculate GST on an amount (or the GST inside a GST-inclusive amount).", {
+        "amount": Param("string"), "rate": Param("string"), "inclusive": Param("boolean", required=False)}),
+    ToolSpec("leads.find", "Find leads in customers.csv: inactive, occasions, top, or custom (with the user's query).", {
+        "method": Param("string", enum=METHODS), "query": Param("string", required=False)}),
 ]
 REGISTRY = ToolRegistry(TOOL_SPECS)
 
@@ -172,3 +180,14 @@ class Sandbox:
 
     def _file_list(self) -> tuple[bool, dict]:
         return True, {"success": True, "files": sorted(self.files)}
+
+    # --- knowledge / GST / leads ---------------------------------------------------------
+
+    def _kb_search(self, query: str) -> tuple[bool, dict]:
+        return True, {"success": True, **knowledge.search(query)}
+
+    def _gst_calculate(self, amount: str, rate: str, inclusive: bool = False) -> tuple[bool, dict]:
+        return gst_calculate(amount, rate, inclusive)
+
+    def _leads_find(self, method: str, query: str | None = None) -> tuple[bool, dict]:
+        return find_leads(self.files, self.now, method, query)

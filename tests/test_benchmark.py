@@ -21,7 +21,8 @@ from arouse.model.transformer import ArouseTransformer  # noqa: E402
 from tests.conftest import ROOT  # noqa: E402
 from tests.helpers import scripted_engine  # noqa: E402
 
-TEST_FILE = ROOT / "benchmarks/agentbench_v1/test.jsonl"
+TEST_FILE = ROOT / "benchmarks/agentbench_v2/test.jsonl"
+V1_FILE = ROOT / "benchmarks/agentbench_v1/test.jsonl"
 
 
 def gold_turns(episodes, first_request_only=False):
@@ -47,7 +48,9 @@ def test_benchmark_file_has_enough_held_out_cases():
     assert decisions >= 500
     assert all(ep["split"] == "test" for ep in eps)
     cats = {c for ep in eps for c in ep["category"].split("+")}
-    assert {"scheduling_one_time", "scheduling_recurring", "ambiguity", "delete", "file_error", "out_of_scope"} <= cats
+    assert {"scheduling_one_time", "scheduling_recurring", "ambiguity", "delete", "file_error", "out_of_scope",
+            "question", "question_unknown", "gst", "gst_followup", "leads_pick", "leads_own_idea", "leads_direct"} <= cats
+    assert len(load_episodes(V1_FILE)) == 400  # v1 stays on disk, frozen, for comparison
 
 
 def test_held_out_tasks_are_unseen_in_training():
@@ -89,3 +92,14 @@ def test_untrained_model_runs_and_reports(tiny_tokenizer):
     report = {"decisions": eval_decisions(rt, eps, limit=4), "end_to_end": eval_end_to_end(rt, eps, limit=2)}
     assert report["decisions"]["decisions"] == 4 and report["end_to_end"]["episodes"] == 2
     assert any("Decision accuracy" in line for line in summary_lines(report))
+
+
+def test_oracle_scores_100_on_answers_and_whole_conversations(tiny_tokenizer):
+    from arouse.evaluation.agentbench import eval_conversations
+
+    eps = generate(60, seed=33, split="test")
+    rt = AgentRuntime(scripted_engine(tiny_tokenizer, gold_turns(eps, first_request_only=True)), REGISTRY)
+    e = eval_end_to_end(rt, eps)
+    assert e["answer_correct_rate"] == 100.0 and e["answer_checked"] > 20
+    rt = AgentRuntime(scripted_engine(tiny_tokenizer, gold_turns(eps)), REGISTRY)
+    assert eval_conversations(rt, eps)["conversation_success_rate"] == 100.0

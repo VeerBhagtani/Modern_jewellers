@@ -26,7 +26,7 @@ from arouse.agent.context import WEEKDAYS, next_weekday_date
 from arouse.agent.grounding import copied_from, current_request
 from arouse.tokenizer import ArouseTokenizer, Special
 
-_OPEN = re.compile(r'"(task|text|path|date)":"((?:[^"\\]|\\.)*)$')
+_OPEN = re.compile(r'"(task|text|query|path|date)":"((?:[^"\\]|\\.)*)$')
 _MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
            "november", "december"]
 _MONTH_RE = "|".join(sorted({*_MONTHS, *(m[:3] for m in _MONTHS), "sept"}, key=len, reverse=True))
@@ -41,7 +41,10 @@ _STOP_PATH = re.compile(r"[\s?!;,]|\.(?:\s|$)")  # a file name ends at whitespac
 _DAYS = "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
 _STOP_TASK = re.compile(
     rf"[,:]|\s(?:at|in|on|by|after|from|before)\s+(?:\d|an?\s|half|the\s\d|{_DAYS}|noon|midnight)"
-    rf"|\s(?:tomorrow|today|tonight|every|each|daily|weekly|monthly|next|this)\b|\s(?:{_DAYS})\b",
+    rf"|\s(?:tomorrow|today|tonight)\b|\s(?:every|each)\s|\s(?:{_DAYS})\b"
+    # "daily"/"weekly"/"monthly" end a task only as a time phrase ("... daily at 9"), not in "the weekly report"
+    r"|\s(?:daily|weekly|monthly)(?=\s*(?:$|[.,!?;]|(?:at|on|in|from|starting|please|thanks)\b))"
+    rf"|\s(?:next|this)\s+(?:{_DAYS}|week|weekend|month|year|morning|afternoon|evening|night)\b",
     re.I,
 )
 _CLOSE = re.compile(r'^"([,}\]].*)?$', re.S)  # closes the string; the rest is ordinary JSON structure
@@ -52,9 +55,15 @@ _LABEL = re.compile(r"^\s*([^:\n]{1,60}?):\s+(?=\S)")
 
 
 def label_end(src: str) -> int | None:
-    """For "<short label>: <content>" ("Please jot down: ...", "Memo: ..."), where the content starts."""
-    m = _LABEL.match(src)
-    return m.end() if m and len(m.group(1).split()) <= 6 else None
+    """For "<short label>: <content>" ("Please jot down: ...", "Memo: ..."), where the content starts.
+    Up to two labels are skipped ("quick one: note this down: ...")."""
+    end = None
+    for _ in range(2):
+        m = _LABEL.match(src[end or 0:])
+        if not m or len(m.group(1).split()) > 6:
+            break
+        end = (end or 0) + m.end()
+    return end
 
 
 def _ends_sentence(rest: str) -> bool:
@@ -136,7 +145,7 @@ class CopyConstraint:
         req = current_request(events)
         said = [ev["content"] for ev in req if ev["type"] == "user"]
         listed = [f for ev in req if ev["type"] == "tool_result" for f in ev["content"].get("files", [])]
-        self.sources = {"task": said, "text": said, "path": said + listed}
+        self.sources = {"task": said, "text": said, "query": said, "path": said + listed}
         self.listed = set(listed)
         dates = calendar_dates(context)
         if dates:
@@ -185,13 +194,14 @@ class CopyConstraint:
                     i = src.find(partial, i + 1)
             if whole:
                 starts = [i for i in starts if i == 0]
-            if field == "text" and (lab := label_end(src)) is not None:
+            if field in ("text", "query") and (lab := label_end(src)) is not None:
                 starts = [i for i in starts if i == lab]  # a labelled note is the whole content after the label
             if field == "task" and not partial:
                 starts = [i for i in starts if not src[i].isdigit()]  # tasks start with a word, not "40 PM"
             for i in starts:
                 rest = src[i + len(partial):]
-                pats = {"task": (_STOP_ALL, _STOP_TASK), "text": (_STOP_ALL,), "path": () if whole else (_STOP_PATH,)}[field]
+                pats = {"task": (_STOP_ALL, _STOP_TASK), "text": (_STOP_ALL,), "query": (_STOP_ALL,),
+                        "path": () if whole else (_STOP_PATH,)}[field]
                 stops = [m.start() for p in pats if (m := p.search(src[i:]))]  # measured from the value's start
                 if stops:
                     cut = min(stops) - len(partial)
@@ -210,10 +220,10 @@ class CopyConstraint:
             return False
         if field == "path":
             return value in self.listed or ("." in value and any(value in s for s in self.sources["path"]))
-        if field == "text":  # a note is saved verbatim to the end of its sentence
+        if field in ("text", "query"):  # notes and queries are copied verbatim to the end of the sentence
             return any(value == src[i:i + len(value)] and _ends_sentence(src[i + len(value):])
                        and label_end(src) in (None, i)
-                       for src in self.sources["text"] for i in self._starts(src, value))
+                       for src in self.sources[field] for i in self._starts(src, value))
         return copied_from(value, self.sources[field])
 
     @staticmethod

@@ -133,7 +133,21 @@ def test_every_user_message_gets_a_reply_and_test_split_is_frozen():
             if ev["type"] == "user":
                 assert i + 1 < len(evs) and evs[i + 1]["type"] == "arouse", ep["id"]
     # the held-out benchmark must stay byte-identical when the train generator changes
-    test = generate(400, 9001, "test")
+    # (AgentBench v1 was made by the v1-v3 generator and is frozen on disk; MANIFEST sha256s guard it)
+    test = generate(480, 9002, "test")
     blob = "".join(json.dumps(e, ensure_ascii=False, separators=(",", ":")) + "\n" for e in test).encode()
-    committed = (ROOT_DIR / "benchmarks/agentbench_v1/test.jsonl").read_bytes()
+    committed = (ROOT_DIR / "benchmarks/agentbench_v2/test.jsonl").read_bytes()
     assert hashlib.sha256(blob).hexdigest() == hashlib.sha256(committed).hexdigest()
+
+
+def test_held_out_questions_leads_and_gst_phrasings_are_unseen_in_training():
+    from arouse.agent.synth import (TEST_CITIES, TEST_DIRECT, TEST_INTERESTS, TEST_KB_QUESTIONS, TEST_LEAD_ASKS,
+                                    TEST_PICKS, TEST_REJECTS, TEST_UNKNOWN)
+
+    train_users = {ev["content"].lower().rstrip("?.!") for ep in generate(4000, seed=104)
+                   for ev in ep["events"] if ev["type"] == "user"}
+    held_out = [q for _, q in TEST_KB_QUESTIONS] + TEST_UNKNOWN + TEST_LEAD_ASKS + TEST_REJECTS
+    held_out += [x for v in TEST_PICKS.values() for x in v] + [x for v in TEST_DIRECT.values() for x in v]
+    assert not {h.lower().rstrip("?.!") for h in held_out} & train_users
+    joined = " ".join(train_users)
+    assert not any(c.lower() in joined for c in TEST_CITIES + TEST_INTERESTS)

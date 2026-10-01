@@ -1,0 +1,27 @@
+# Continue training arouse-agent-s on agent_v4 (knowledge questions, GST, leads) from the released v3 model,
+# at a 1024-token context. Same tokenizer and weights shape. batch 12 x 1024 tokens ~ the v3 step size.
+run_name: arouse-agent-s-v4
+model_config: configs/model_agent_s_1k.yaml
+data_dir: artifacts/data/agent_v4
+out_dir: checkpoints/arouse-agent-s-v4
+init_from: models/arouse-agent-s
+seed: 778
+batch_size: 12
+grad_accum_steps: 1
+seq_len: null
+max_steps: 4000
+lr: 1.2e-3
+min_lr: 4.0e-5
+warmup_steps: 50
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+precision: fp32
+device: auto
+threads: 4
+log_interval: 20
+eval_interval: 200
+eval_batches: 8
+checkpoint_interval: 200
+keep_checkpoints: 3
