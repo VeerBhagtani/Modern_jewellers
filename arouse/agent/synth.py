@@ -940,7 +940,9 @@ class Generator:
             if r.random() < 0.25:
                 return "ambiguity"
             b.user(r.choice([f"{rate}%", f"{rate} percent", f"use {rate}%", rate, f"{rate}% please"]))
-        args = {"amount": a, "rate": rate}
+        said = next(ev["content"] for ev in b.events if ev["type"] == "user" and a.lower() in ev["content"].lower())
+        i = said.lower().index(a.lower())
+        args = {"amount": said[i:i + len(a)], "rate": rate}  # exactly as written ("rs 500" after a polite prefix)
         if kind == "inclusive":
             args["inclusive"] = True
         ok, res = b.act(Action.tool_call("gst.calculate", args), ["intent", "tool_selection", "argument_generation"],

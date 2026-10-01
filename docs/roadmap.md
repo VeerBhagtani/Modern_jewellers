@@ -14,22 +14,23 @@ Each milestone is: explain → implement → test → run tests → fix → repo
 | 7 | Arouse AgentBench v1 (held-out split) + `/v1/agent` API for MDA. Results in README / `benchmarks/results/` | ✅ done |
 | 8 | Weak-spot round: `agent_v3` data + 3,000 more training steps, plus runtime fixes (dates follow the request, verbatim notes, whole file names, delete safety, confirmations from tool results). Held-out end-to-end success 71.25% → 92.75% | ✅ done |
 | 9 | Website: the model runs in the browser (`web/`, JS port with parity tests), GitHub Pages workflow | ✅ done |
+| 10 | Questions, GST and leads: knowledge base + `kb.search`, `gst.calculate`, `leads.find` (three methods or the user's own); agent_v4 data, 4,000 more steps at a 1,024-token context; AgentBench v2 with answer and whole-conversation metrics | ✅ done |
 
 ## Next
 
-Measured weak spots (held-out, end to end):
-- deletes with unseen phrasing: 42.86%. "Please drop the … reminder" is read as a new reminder
-- the raw model's structured-output validity on unseen phrasing: 91%. The runtime brings it to 98.7%
-- tasks after unusual lead-ins ("Ping me at 9:40 PM so I …")
+Measured weak spots (AgentBench v2 held-out, whole conversations):
+- lead requests with unseen wording: 22 to 39%. "Who stopped buying from me?" or "number two please" often get the three-method question again
+- deletes with unseen phrasing: 54%. "Please drop the … reminder" is read as a new reminder
+- relative reminders with unseen phrasing: 71% ("Half an hour from now, …")
 
 Planned work:
-- A larger model (the 110M v0.1 config) on a GPU, with real, provenance-tracked pretraining text plus agent SFT data.
-- More tools and tool-set variation (so the model conditions on `<|tools|>`), plus memory retrieval.
-- A fresh held-out benchmark (new templates), because the current one has informed runtime design.
-- Paraphrase robustness (typos, code-mixed Hindi/English).
+- A larger model (the 110M v0.1 config) on a GPU, with real, provenance-tracked pretraining text plus agent SFT data, so that wording generalizes beyond templates.
+- A larger knowledge base, with dated entries for rules that change (GST rates).
+- Lead sources beyond `customers.csv`, such as client-executed tools in MDA (web or CRM search).
+- A fresh held-out benchmark: the current ones have informed runtime design.
 
 ## Hardware note
 
 The dev container has **no GPU** (4 CPU cores).
-- `arouse-agent-s` (5.5M params) was trained on CPU: 7,000 steps and about 86M tokens in total.
+- `arouse-agent-s` (5.5M params) was trained on CPU: 11,000 steps and about 135M tokens in total.
 - The ~110M v0.1 configuration needs a CUDA GPU. The code path is the same, but no v0.1 training run has been done.

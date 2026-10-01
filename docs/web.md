@@ -16,11 +16,12 @@ Opening `web/index.html` directly from disk (`file://`) does not work, because b
 | `web/arouse.js` | JavaScript port of the Arouse runtime: byte-level BPE tokenizer, the Transformer (RoPE, GQA, SwiGLU, RMSNorm, KV cache, blocked prompt prefill), sampling, action protocol codec, copy- and date-constrained decoding, grounding and answer guards, the agent loop, the sandbox tools |
 | `web/worker.js` | Loads the model and runs the agent off the main thread |
 | `web/index.html` | Chat UI plus a workspace panel (reminders, notes, files) |
-| `web/model/` | `config.json` (architecture and tensor table), `weights.bin` (float16), `tokenizer.json`, `response_vocab.txt`. Hosts that only serve text can use base64 weights instead: set `"weights_file": "weights.b64.txt", "weights_encoding": "base64"` in `config.json` |
+| `web/model/` | `config.json` (architecture and tensor table), `weights.bin` (float16), `tokenizer.json`, `response_vocab.txt`, `knowledge.json` (the knowledge base plus the word lists its search uses). Hosts that only serve text can use base64 weights instead: set `"weights_file": "weights.b64.txt", "weights_encoding": "base64"` in `config.json` |
 
 ## Behaviour
 
-- **Workspace:** reminders, notes and files are stored in the browser's `localStorage`. Three sample files are included and marked as samples. Visitors can add their own text or CSV files (up to 200 KB each).
+- **Workspace:** reminders, notes and files are stored in the browser's `localStorage`. Four sample files are included and marked as samples. Visitors can add their own text or CSV files (up to 200 KB each).
+- **Sample customer list:** `customers.csv` has dates relative to today, so "Find me leads" works immediately. Replace it with your own file (same columns) to find real leads.
 - **Firing reminders:** reminders fire while the page is open. The page checks every 15 seconds and shows a notice in the chat. One-time reminders are then removed; repeating ones move to their next run.
 - **Steps:** each answer can be expanded to show the tool calls Arouse made and their results.
 - **KV cache:** the KV cache is reused for the shared prompt prefix. The context includes the current minute, so most turns recompute the prompt. At this model size that takes a few seconds on a laptop.
@@ -33,6 +34,8 @@ Opening `web/index.html` directly from disk (`file://`) does not work, because b
 - prompt token ids for benchmark episodes: identical
 - next-token logits: equal within float rounding, with the same argmax
 - copy-constraint continuations and runtime fallback answers: identical
+- every GST, leads and knowledge-base tool call replayed from 600 generated episodes: identical results
+- 600+ knowledge-base queries, and every amount, rate and time extracted from user messages: identical
 - agent decisions (raw and system mode) and end-to-end runs on AgentBench cases:
   - identical whenever no resampling was needed
   - resamples use a different random generator (mulberry32 in JS, torch in Python), so those runs may differ

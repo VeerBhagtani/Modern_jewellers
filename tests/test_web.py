@@ -156,7 +156,7 @@ def test_answers_and_copy_constraint_match_python(tmp_path, py_engine):
         for i, e in enumerate(ep["events"]):
             if e["type"] == "arouse" and e["turn"]["action"]["type"] == "tool_call":
                 args = e["turn"]["action"]["arguments"]
-                for field in ("task", "text", "path", "date"):
+                for field in ("task", "text", "query", "path", "date", "time", "amount", "rate"):
                     if field in args:
                         v = args[field]
                         conts += [[ep["events"][:i], ctx, field, v[:k]] for k in (0, len(v) // 2, len(v))]
@@ -168,7 +168,7 @@ def test_answers_and_copy_constraint_match_python(tmp_path, py_engine):
                 actions.append([a, ep["events"][:i]])
                 if a["tool"] == "scheduler.delete":  # also every other id, which must be refused
                     actions += [[{**a, "arguments": {"task_id": f"r-{k}"}}, ep["events"][:i]] for k in range(1, 5)]
-                for field in ("task", "text", "path", "date"):
+                for field in ("task", "text", "query", "path", "date", "time", "amount", "rate"):
                     if field in a["arguments"]:
                         v = a["arguments"][field]
                         completes += [[ep["events"][:i], episode_header(ep).context, field, v[:k]] for k in (len(v) // 2, len(v))]
@@ -255,3 +255,16 @@ def test_new_tools_match_python_exactly(tmp_path):
         assert results == [ev for ev in ep["events"] if ev["type"] in ("tool_result", "tool_error")], ep["id"]
     assert js["kb"] == [search(q) for q in queries]
     assert len(eps) > 150
+
+
+def test_amount_rate_time_mentions_match_python(tmp_path):
+    from arouse.agent.mentions import gst_mentions, mentioned_times
+    from arouse.agent.synth import generate
+
+    eps = generate(400, seed=63) + generate(200, seed=64, split="test")
+    texts = [e["content"] for ep in eps for e in ep["events"] if e["type"] == "user"]
+    texts += ["at 9:30 at night", "12 AM", "at 0:30", "13 pm", "at 7.", "8:30 or 6 PM", "noon or midnight", "a.m. 9"]
+    requests = [ep["events"][:i] for ep in eps for i, e in enumerate(ep["events"]) if e["type"] == "arouse"]
+    js = run_js(tmp_path, times=texts, gst=requests)
+    assert js["times"] == [sorted(mentioned_times([t])) for t in texts]
+    assert js["gst"] == [[sorted(x) for x in gst_mentions(r)] for r in requests]

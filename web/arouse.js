@@ -382,6 +382,9 @@
       in_minutes: P("integer", { required: false, minimum: 1, maximum: 10080 }), repeat: REPEAT },
     "scheduler.list": {}, "scheduler.delete": { task_id: P("string") }, "notes.create": { text: P("string") },
     "file.read": { path: P("string") }, "file.list": {},
+    "kb.search": { query: P("string") },
+    "gst.calculate": { amount: P("string"), rate: P("string"), inclusive: P("boolean", { required: false }) },
+    "leads.find": { method: P("string", { enum: ["inactive", "occasions", "top", "custom"] }), query: P("string", { required: false }) },
   };
   const TOOL_NAMES = Object.keys(TOOLS);
   function checkParam(p, v, path) {
@@ -474,12 +477,76 @@
     return ids;
   }
 
+  // ---------------------------------------------------------------- what the user wrote (arouse/agent/mentions.py)
+  const MONEY_RE = /(?:₹\s?|rs\.?\s?|inr\s?)?[0-9][0-9,]*(?:\.[0-9]+)?(?:\s?(?:k|thousand|lakhs?|lacs?|crores?|cr)\b)?(?:\s?rupees)?/gi;
+  const PERCENT_AFTER = /\s?(?:%|percent\b|per cent\b)/iy;
+  const RATE_IN = /([0-9]+(?:\.[0-9]+)?)\s?(?:%|percent\b|per cent\b)/gi;
+  const NUMBER_IN = /[0-9]+(?:\.[0-9]+)?/g;
+  function moneyAndRates(said, rateReplies) {
+    const amounts = new Set(), rates = new Set();
+    for (const text of said) {
+      const reply = rateReplies.includes(text);
+      for (const m of text.matchAll(MONEY_RE)) {
+        const span = m[0].replace(/,+$/, "").trim();
+        PERCENT_AFTER.lastIndex = m.index + m[0].length;
+        if (!reply && !PERCENT_AFTER.test(text) && span) amounts.add(span);
+      }
+      for (const m of text.matchAll(RATE_IN)) rates.add(m[1]);
+      if (reply) for (const m of text.matchAll(NUMBER_IN)) rates.add(m[0]);
+    }
+    return [amounts, rates];
+  }
+  const TIME_PATTERNS = [
+    [/\b(\d{1,2})(?::(\d{2}))?\s?(a\.?m\.?|p\.?m\.?)(?![a-z])/gi, "ampm"],
+    [/\b(\d{1,2})(?::(\d{2}))?\s+in the (morning|afternoon|evening)\b/gi, "period"],
+    [/\b(\d{1,2})(?::(\d{2}))?\s+at night\b/gi, "night"],
+    [/\b(\d{1,2}):(\d{2})\b(?!\s?(?:a\.?m|p\.?m))/gi, "clock"],
+    [/\bat (\d{1,2})\b(?![:.,]?\d|\s?(?:a\.?m|p\.?m|%)|\s+(?:in the|at night|minutes?|hours?|days?))/gi, "bare"],
+  ];
+  function mentionedTimes(texts) {
+    const out = new Set();
+    for (const text of texts) {
+      if (/\bnoon\b/i.test(text)) out.add("12:00");
+      if (/\bmidnight\b/i.test(text)) out.add("00:00");
+      const taken = [];
+      for (const [pat, kind] of TIME_PATTERNS) {
+        for (const m of text.matchAll(pat)) {
+          const a0 = m.index, b0 = m.index + m[0].length;
+          if (taken.some(([a, b]) => a0 < b && a < b0)) continue;
+          taken.push([a0, b0]);
+          let h = Number(m[1]);
+          const mm = kind !== "bare" ? Number(m[2] || 0) : 0;
+          if (mm > 59 || h > 23) continue;
+          let cands;
+          if (kind === "ampm") {
+            if (h === 0 || h > 12) continue;
+            cands = [(h % 12) + (m[3].toLowerCase().startsWith("p") ? 12 : 0)];
+          } else if (kind === "period") cands = h >= 1 && h <= 12 ? [(h % 12) + (m[3].toLowerCase() === "morning" ? 0 : 12)] : [];
+          else if (kind === "night") cands = h >= 7 && h <= 11 ? [(h % 12) + 12] : [];
+          else if (kind === "clock" && (h >= 13 || m[1].startsWith("0") || h === 0)) cands = [h];
+          else cands = h >= 1 && h <= 11 ? [h, h + 12] : h <= 23 ? [h] : [];
+          for (const c of cands) if (c <= 23) out.add(`${pad(c)}:${pad(mm)}`);
+        }
+      }
+    }
+    return out;
+  }
+  const Q_GST_RATE = "Which GST rate should I use? For example 3% for gold, 5% or 18%.";
+  function gstMentions(request) {
+    const said = request.filter((e) => e.type === "user").map((e) => e.content), replies = [];
+    for (let i = 0; i + 1 < request.length; i++) {
+      const ev = request[i], nxt = request[i + 1];
+      if (ev.type === "arouse" && ev.turn.action.question === Q_GST_RATE && nxt.type === "user") replies.push(nxt.content);
+    }
+    return moneyAndRates(said, replies);
+  }
+
   // ---------------------------------------------------------------- grounding
   const WORD_RE = /[\p{L}\p{N}_'’-]+|[^\p{L}\p{N}_\s]/gu;
   const BOUNDARY = new Set(["at", "on", "in", "by", "after", "before", "from", "tomorrow", "today", "tonight", "every", "each",
     "this", "next", "daily", "please", "pls", "thanks", "thank", "thx", "remind", "so", "then", "monthly", "weekly",
     ...WEEKDAYS, ...MONTHS, ...MONTHS.map((m) => m.slice(0, 3))]);
-  const COPY_FIELDS = { "scheduler.create": "task", "notes.create": "text" };
+  const COPY_FIELDS = { "scheduler.create": "task", "notes.create": "text", "kb.search": "query", "leads.find": "query" };
   const words = (s) => s.toLowerCase().match(WORD_RE) || [];
 
   function currentRequest(events) {
@@ -526,21 +593,48 @@
     }
     return "no listed reminder matches the user's words";
   }
+  function namesFile(msg, path) { // `path` occurs as a whole name ("payments.c" is not named by "payments.csv")
+    const low = msg.toLowerCase(), p = path.toLowerCase();
+    for (let i = low.indexOf(p); p && i !== -1; i = low.indexOf(p, i + 1)) {
+      const after = low.slice(i + p.length, i + p.length + 1);
+      if (!after || !(/[\p{L}\p{N}]/u.test(after) || after === "_")) return true;
+    }
+    return false;
+  }
   function groundingIssue(action, events) {
     if (action.type !== "tool_call") return null;
     if (action.tool === "scheduler.delete") return deleteIssue(String(action.arguments.task_id || ""), events);
     const req = currentRequest(events), said = req.filter((e) => e.type === "user").map((e) => e.content);
+    for (let i = 0; i + 1 < req.length; i++) { // repeating a call that failed for good can never help
+      const prev = req[i], obs = req[i + 1];
+      if (prev.type === "arouse" && obs.type === "tool_error" && !obs.content.retryable && prev.turn.action.tool === action.tool
+        && canonicalJson(prev.turn.action.arguments || {}) === canonicalJson(action.arguments)) return `this exact call already failed: ${obs.content.error}`;
+    }
     const field = COPY_FIELDS[action.tool];
     if (field && field in action.arguments && !copiedFrom(action.arguments[field], said)) return `${field} not grounded`;
+    if (action.tool === "gst.calculate") { // an amount and a rate the user wrote (a rate is written with %)
+      const [amounts, rates] = gstMentions(req);
+      for (const [key, allowed] of [["amount", amounts], ["rate", rates]]) {
+        const v = String(action.arguments[key] ?? "").trim(), low = new Set([...allowed].map((x) => x.toLowerCase()));
+        if ((allowed.size && !low.has(v.toLowerCase())) || !v || !said.some((m) => m.toLowerCase().includes(v.toLowerCase())))
+          return `${key} '${v}' is not the ${key} the user wrote`;
+      }
+    }
+    if (action.tool === "scheduler.create" && "time" in action.arguments) {
+      const times = mentionedTimes(said);
+      if (times.size && !times.has(action.arguments.time)) return `time ${action.arguments.time} is not a time the user wrote`;
+    }
     if (action.tool === "file.read") {
       const path = action.arguments.path || "";
       const listed = new Set(req.filter((e) => e.type === "tool_result").flatMap((e) => e.content.files || []));
-      if (!listed.has(path) && !said.some((m) => m.toLowerCase().includes(path.toLowerCase()))) return "path not grounded";
+      if (!listed.has(path) && !said.some((m) => namesFile(m, path))) return "path not grounded";
     }
     return null;
   }
   const ANSWER_WORD = /[a-z0-9][a-z0-9_.:'-]*[a-z0-9]|[a-z0-9]/gi;
-  const answerWords = (t) => (t.match(ANSWER_WORD) || []).map((w) => w.toLowerCase());
+  // "₹1,374.10" and the tool's 1374.1 must compare equal: drop digit grouping and trailing decimal zeros
+  const normalizeNumbers = (t) => t.replace(/(?<=\d),(?=\d)/g, "").replace(/(\d+)\.(\d*?)0+(?!\d)/g, (_, a, b) => a + (b ? "." + b : ""));
+  const answerWords = (t) => (normalizeNumbers(t).match(ANSWER_WORD) || []).map((w) => w.toLowerCase());
   function answerIssue(action, events, vocab) {
     const text = action.result || action.question || action.error;
     if (!text || !vocab || !vocab.size) return null;
@@ -550,7 +644,7 @@
       else if (ev.type === "tool_result" || ev.type === "tool_error") sources.push(pyJson(ev.content));
       else if (ev.type === "arouse" && ev.turn.action.type === "tool_call") sources.push(pyJson(ev.turn.action.arguments));
     }
-    const seen = new Set(sources.flatMap(answerWords)), blob = sources.join(" ").toLowerCase();
+    const seen = new Set(sources.flatMap(answerWords)), blob = normalizeNumbers(sources.join(" ")).toLowerCase();
     const unknown = answerWords(text).filter((w) => !vocab.has(w) && !seen.has(w) && !/^\d{1,3}(st|nd|rd|th)?$/.test(w)
       && !(/\d/.test(w) && blob.includes(w)));
     if (unknown.length) return `answer uses unknown words: ${unknown.slice(0, 5)}`;
@@ -582,8 +676,11 @@
   const STOP_ALL = /[?!;]|\.(?=\s|$)|\s(?:please|pls|thanks|thank you|thx)\b/i;
   const STOP_PATH = /[\s?!;,]|\.(?:\s|$)/;
   const STOP_TASK = new RegExp(`[,:]|\\s(?:at|in|on|by|after|from|before)\\s+(?:\\d|an?\\s|half|the\\s\\d|${DAYS_RE}|noon|midnight)` +
-    `|\\s(?:tomorrow|today|tonight|every|each|daily|weekly|monthly|next|this)\\b|\\s(?:${DAYS_RE})\\b`, "i");
-  const OPEN_RE = /"(task|text|path|date)":"((?:[^"\\]|\\.)*)$/;
+    `|\\s(?:tomorrow|today|tonight)\\b|\\s(?:every|each)\\s|\\s(?:${DAYS_RE})\\b` +
+    "|\\s(?:daily|weekly|monthly)(?=\\s*(?:$|[.,!?;]|(?:at|on|in|from|starting|please|thanks)\\b))" +
+    `|\\s(?:next|this)\\s+(?:${DAYS_RE}|week|weekend|month|year|morning|afternoon|evening|night)\\b`, "i");
+  const OPEN_RE = /"(task|text|query|path|date|time|amount|rate)":"((?:[^"\\]|\\.)*)$/;
+  const CHOICE_FIELDS = ["date", "time", "amount", "rate"]; // values chosen from a fixed list of candidates
   const CLOSE_RE = /^"([,}\]][\s\S]*)?$/;
   const isAlnum = (ch) => /[\p{L}\p{N}]/u.test(ch);
 
@@ -621,9 +718,14 @@
   }
 
   const LABEL = /^\s*([^:\n]{1,60}?):\s+(?=\S)/;
-  function labelEnd(src) { // "<short label>: <content>": where the content starts
-    const m = LABEL.exec(src);
-    return m && m[1].split(/\s+/).filter(Boolean).length <= 6 ? m[0].length : null;
+  function labelEnd(src) { // "<short label>: <content>": where the content starts (up to two labels)
+    let end = null;
+    for (let k = 0; k < 2; k++) {
+      const m = LABEL.exec(src.slice(end || 0));
+      if (!m || m[1].split(/\s+/).filter(Boolean).length > 6) break;
+      end = (end || 0) + m[0].length;
+    }
+    return end;
   }
 
   function referencedDates(texts, now) {
@@ -645,7 +747,7 @@
       const req = currentRequest(events);
       const said = req.filter((e) => e.type === "user").map((e) => e.content);
       const listed = req.filter((e) => e.type === "tool_result").flatMap((e) => e.content.files || []);
-      this.sources = { task: said, text: said, path: said.concat(listed) };
+      this.sources = { task: said, text: said, query: said, path: said.concat(listed) };
       this.listed = new Set(listed);
       let dates = new Set();
       if (context && context.now) {
@@ -657,6 +759,17 @@
         if (ref.size) dates = ref;
       }
       this.dates = [...dates].sort();
+      const [amounts, rates] = gstMentions(req);
+      this.pathSpans = new Set();
+      for (const src of said) { // "vet_visits.txt" in "Count the lines in vet_visits.txt." (never "vet_visits.")
+        for (let i = 0; i < src.length; i++) {
+          if (isAlnum(src[i]) && (i === 0 || !(isAlnum(src[i - 1]) || "_-./\\".includes(src[i - 1])))) {
+            const m = STOP_PATH.exec(src.slice(i)), span = m ? src.slice(i, i + m.index) : src.slice(i);
+            if (span.includes(".")) this.pathSpans.add(span);
+          }
+        }
+      }
+      this.choices = { date: this.dates, time: [...mentionedTimes(said)].sort(), amount: [...amounts].sort(), rate: [...rates].sort() };
     }
     openField(generated) {
       const at = generated.lastIndexOf(S.TOOL_CALL);
@@ -667,17 +780,17 @@
       return [m[1], m[2], body];
     }
     nextAfterClose(field, body) {
-      if (field === "date") return ",";
+      if (field === "date" || field === "amount") return ",";
       if (field === "task" && body.includes('"scheduler.create"') && !body.includes('"in_minutes"')) return ",";
       return "}";
     }
     continuations(field, partial) {
-      if (field === "date") return this.dates.filter((d) => d.startsWith(partial) && d !== partial).map((d) => d.slice(partial.length));
+      if (CHOICE_FIELDS.includes(field)) return this.choices[field].filter((d) => d.startsWith(partial) && d !== partial).map((d) => d.slice(partial.length));
       const out = [];
       const word = field === "path" ? (ch) => isAlnum(ch) || "_-./\\".includes(ch) : isAlnum;
       for (const src of this.sources[field]) {
         const whole = field === "path" && this.listed.has(src); // a listed file name is copied whole
-        const pats = { task: [STOP_ALL, STOP_TASK], text: [STOP_ALL], path: whole ? [] : [STOP_PATH] }[field];
+        const pats = { task: [STOP_ALL, STOP_TASK], text: [STOP_ALL], query: [STOP_ALL], path: whole ? [] : [STOP_PATH] }[field];
         let starts = [];
         if (!partial) {
           for (let i = 0; i < src.length; i++) if (isAlnum(src[i]) && (i === 0 || !word(src[i - 1]))) starts.push(i);
@@ -685,7 +798,7 @@
           for (let i = src.indexOf(partial); i !== -1; i = src.indexOf(partial, i + 1)) if (i === 0 || !word(src[i - 1])) starts.push(i);
         }
         if (whole) starts = starts.filter((i) => i === 0);
-        const lab = field === "text" ? labelEnd(src) : null;
+        const lab = field === "text" || field === "query" ? labelEnd(src) : null;
         if (lab !== null) starts = starts.filter((i) => i === lab); // a labelled note is the whole content after the label
         if (field === "task" && !partial) starts = starts.filter((i) => !/\d/.test(src[i]));
         for (const i of starts) {
@@ -703,11 +816,11 @@
       return out;
     }
     complete(field, value) {
-      if (field === "date") return this.dates.includes(value);
+      if (CHOICE_FIELDS.includes(field)) return this.choices[field].includes(value);
       if (!value.trim() || value !== value.trim()) return false;
-      if (field === "path") return this.listed.has(value) || (value.includes(".") && this.sources.path.some((s) => s.includes(value)));
-      if (field === "text") { // a note is saved verbatim to the end of its sentence
-        return this.sources.text.some((src) => {
+      if (field === "path") return this.listed.has(value) || this.pathSpans.has(value); // a whole file name
+      if (field === "text" || field === "query") { // notes and queries are copied verbatim to the end of the sentence
+        return this.sources[field].some((src) => {
           for (let i = src.indexOf(value); i !== -1; i = src.indexOf(value, i + 1)) {
             if (i > 0 && isAlnum(src[i - 1])) continue;
             const lab = labelEnd(src);
@@ -725,7 +838,7 @@
         const st = this.openField(generated);
         if (!st) return logits;
         const [field, partial, body] = st;
-        if (field === "date" ? !this.dates.length : !this.sources[field].length) return logits;
+        if (CHOICE_FIELDS.includes(field) ? !this.choices[field].length : !this.sources[field].length) return logits;
         const allowed = new Set();
         for (const rest of this.continuations(field, partial)) {
           for (let n = 1; n <= Math.min(rest.length, this.maxlen); n++) {
@@ -748,8 +861,215 @@
     }
   }
 
-  // ---------------------------------------------------------------- sandbox tools
   const err = (message, retryable = false) => ({ success: false, error: message, retryable });
+
+  // ---------------------------------------------------------------- knowledge base (arouse/agent/knowledge.py)
+  let KB = null;
+  function setKnowledge(kb) {
+    const S = kb.search, stop = new Set(S.stopwords), noStem = new Set(S.no_stem), syn = S.synonyms;
+    const stem = (w0) => {
+      let w = syn[w0] || w0;
+      if (noStem.has(w) || /^[0-9]+$/.test(w)) return w;
+      if (w.length > 4 && w.endsWith("ies")) w = w.slice(0, -3) + "y";
+      else if (w.length > 3 && w.endsWith("xes")) w = w.slice(0, -2);
+      else if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) w = w.slice(0, -1);
+      if (w.length > 5 && w.endsWith("ing")) w = w.slice(0, -3);
+      else if (w.length > 4 && w.endsWith("ed")) w = w.slice(0, -2);
+      if (w.length > 3 && w.endsWith("e")) w = w.slice(0, -1);
+      return w;
+    };
+    const terms = (text) => {
+      const out = [];
+      for (const w of text.toLowerCase().replace(/\be[- ](?=invoic|way)/g, "e").match(/[a-z]+|[0-9]+/g) || []) {
+        if ((w.length > 1 || /^[0-9]+$/.test(w)) && !stop.has(w)) { const t = stem(w); if (!out.includes(t)) out.push(t); }
+      }
+      return out;
+    };
+    const entries = kb.entries;
+    const phrasings = entries.map((e) => [e.q, ...e.alts].map((p) => new Set(terms(p))));
+    const strong = phrasings.map((ps) => new Set(ps.flatMap((x) => [...x])));
+    const weak = entries.map((e) => new Set(terms(e.a)));
+    const df = new Map();
+    strong.forEach((st, i) => { for (const t of new Set([...st, ...weak[i]])) df.set(t, (df.get(t) || 0) + 1); });
+    const n = entries.length, idf = new Map([...df].map(([t, c]) => [t, Math.log(1 + n / c)]));
+    KB = { kb, terms, stem, entries, phrasings, strong, weak, idf, n, leadStop: new Set(S.lead_stopwords) };
+  }
+  function kbSearch(query) {
+    if (!KB) return { found: false };
+    const { idf } = KB, q = KB.terms(query), known = q.filter((t) => idf.has(t));
+    if (!known.length || q.length - known.length >= known.length) return { found: false };
+    let knownW = 0;
+    for (const t of known) knownW += idf.get(t);
+    let best = -1, bestScore = 0, bestCover = 0;
+    KB.strong.forEach((st, i) => {
+      if (!known.some((t) => st.has(t))) return;
+      const wk = KB.weak[i];
+      let num = 0;
+      for (const t of known) num += idf.get(t) * (st.has(t) ? 1 : wk.has(t) ? 0.5 : 0);
+      const cover = num / knownW;
+      let prec = 0;
+      for (const ph of KB.phrasings[i]) {
+        let denom = 0, shared = 0;
+        for (const t of [...ph].sort()) denom += idf.get(t);
+        for (const t of known) if (ph.has(t)) shared += idf.get(t);
+        if (denom) prec = Math.max(prec, shared / denom);
+      }
+      const score = cover + 0.25 * prec;
+      if (score > bestScore + 1e-9) { best = i; bestScore = score; bestCover = cover; }
+    });
+    if (best < 0 || bestCover < 0.5) return { found: false };
+    const e = KB.entries[best];
+    return { found: true, id: e.id, question: e.q, answer: e.a };
+  }
+
+  // ---------------------------------------------------------------- GST and leads (arouse/agent/business.py)
+  const AMOUNT_RE = /^(?:₹|rs\.?|inr)?\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*(k|thousand|lakhs?|lacs?|crores?|cr)?\s*(?:rupees|rs\.?|\/-)?$/i;
+  const RATE_RE = /^([0-9]+(?:\.[0-9]+)?)\s*(?:%|percent|per cent)?$/i;
+  const UNIT = { k: 1e3, thousand: 1e3, lakh: 1e5, lakhs: 1e5, lac: 1e5, lacs: 1e5, crore: 1e7, crores: 1e7, cr: 1e7 };
+  function decimalToInt(num, scale) {
+    const [whole, frac = ""] = num.split("."), digits = String(scale).length - 1;
+    const f = digits ? (frac + "0".repeat(digits)).slice(0, digits) : "";
+    return Number(whole || "0") * scale + (f ? Number(f) : 0);
+  }
+  function parseAmount(text) {
+    const m = AMOUNT_RE.exec(text.trim());
+    if (!m) return null;
+    const unit = UNIT[(m[2] || "").toLowerCase()] || 1, digits = m[1].replace(/,/g, "");
+    const paise = m[1].includes(".") ? decimalToInt(digits, 100 * unit) : Number(digits) * 100 * unit;
+    return paise > 0 && paise <= 1e15 ? paise : null;
+  }
+  function parseRate(text) {
+    const m = RATE_RE.exec(text.trim());
+    if (!m) return null;
+    const bp = decimalToInt(m[1], 100);
+    return bp >= 0 && bp <= 10000 ? bp : null;
+  }
+  const money = (paise) => paise / 100;
+  const toPaise = (x) => Math.round(x * 100);
+  function fmtInr(paise) {
+    const rupees = Math.floor(paise / 100), p = paise % 100;
+    let s = String(rupees);
+    if (s.length > 3) {
+      let head = s.slice(0, -3);
+      const tail = s.slice(-3), groups = [];
+      while (head.length > 2) { groups.unshift(head.slice(-2)); head = head.slice(0, -2); }
+      s = (head ? [head, ...groups, tail] : [...groups, tail]).join(",");
+    }
+    return s + (p ? "." + String(p).padStart(2, "0") : "");
+  }
+  function fmtRate(bp) {
+    const whole = Math.floor(bp / 100), frac = bp % 100;
+    return frac ? `${whole}.${String(frac).padStart(2, "0")}`.replace(/0+$/, "") : String(whole);
+  }
+  function gstCalculate(amount, rate, inclusive = false) {
+    const a0 = parseAmount(amount), r0 = parseRate(rate);
+    if (a0 === null) return [false, err(`I couldn't read the amount '${amount}'`)];
+    if (r0 === null) return [false, err(`I couldn't read the GST rate '${rate}'`)];
+    const a = BigInt(a0), r = BigInt(r0);
+    let base, gst;
+    if (inclusive) { const d = 10000n + r; base = (a * 10000n * 2n + d) / (2n * d); gst = a - base; }
+    else { base = a; gst = (a * r + 5000n) / 10000n; }
+    const cgst = (gst + 1n) / 2n, N = Number;
+    return [true, { success: true, amount: money(a0), rate: money(r0), inclusive: Boolean(inclusive), taxable_value: money(N(base)),
+      gst: money(N(gst)), cgst: money(N(cgst)), sgst: money(N(gst - cgst)), total: money(N(base + gst)) }];
+  }
+
+  const CUSTOMER_FILE = "customers.csv", METHODS = ["inactive", "occasions", "top", "custom"];
+  function parseCsv(text) {
+    const rows = [];
+    let row = [], field = "", quoted = false;
+    const endField = () => { row.push(field.trim()); field = ""; };
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (quoted) {
+        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (c === '"') quoted = false;
+        else field += c;
+      } else if (c === '"') quoted = true;
+      else if (c === ",") endField();
+      else if (c === "\r" || c === "\n") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        endField();
+        if (row.some(Boolean)) rows.push(row);
+        row = [];
+      } else field += c;
+    }
+    endField();
+    if (row.some(Boolean)) rows.push(row);
+    return rows;
+  }
+  const DAY = 864e5;
+  const dayIso = (n) => new Date(n * DAY).toISOString().slice(0, 10);
+  function isoDay(s) {
+    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s.trim().slice(0, 10));
+    if (!m) return null;
+    const y = +m[1], mo = +m[2], d = +m[3], t = new Date(Date.UTC(y, mo - 1, d));
+    return t.getUTCMonth() === mo - 1 && t.getUTCDate() === d ? Date.UTC(y, mo - 1, d) / DAY : null;
+  }
+  function monthDay(s) {
+    const m = /(\d{1,2})-(\d{1,2})$/.exec(s.trim());
+    if (!m) return null;
+    const mo = +m[1], d = +m[2];
+    return mo >= 1 && mo <= 12 && d >= 1 && d <= 31 ? [mo, d] : null;
+  }
+  function nextOccurrence([mo, d0], today) {
+    const year0 = new Date(today * DAY).getUTCFullYear();
+    let occ;
+    for (const year of [year0, year0 + 1]) {
+      let d = d0;
+      for (;;) { const t = new Date(Date.UTC(year, mo - 1, d)); if (t.getUTCMonth() === mo - 1) { occ = Date.UTC(year, mo - 1, d) / DAY; break; } d--; }
+      if (occ >= today) return occ;
+    }
+    return occ;
+  }
+  const spent = (row) => parseAmount(row.total_spent || "0") || 0;
+  function compareKeys(a, b) {
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
+    return 0;
+  }
+  function customKeywords(query) { return KB ? KB.terms(query).filter((t) => !KB.leadStop.has(t)) : []; }
+  function findLeads(files, now, method, query) {
+    if (!METHODS.includes(method)) return [false, err(`unknown method ${method}`)];
+    if ((method === "custom") !== (query !== undefined && query !== null)) return [false, err("method custom needs a query; the other methods take none")];
+    if (!(CUSTOMER_FILE in files)) return [false, err(`file not found: ${CUSTOMER_FILE}`)];
+    const rows = parseCsv(files[CUSTOMER_FILE]);
+    if (!rows.length) return [false, err(`${CUSTOMER_FILE} is empty`)];
+    const head = rows[0].map((h) => h.trim().toLowerCase());
+    const need = { inactive: "last_purchase", occasions: null, top: "total_spent", custom: null }[method];
+    if (!head.includes("name") || (need && !head.includes(need))) return [false, err(`${CUSTOMER_FILE} needs the columns name and ${need || "city"}`)];
+    if (method === "occasions" && !head.includes("birthday") && !head.includes("anniversary")) return [false, err(`${CUSTOMER_FILE} needs a birthday or anniversary column`)];
+    const people = rows.slice(1).map((r) => Object.fromEntries(head.map((h, i) => [h, i < r.length ? r[i] : ""])));
+    const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY, found = [];
+    if (method === "inactive") {
+      for (const p of people) { const last = isoDay(p.last_purchase || ""); if (last !== null && today - last >= 90) found.push([[-spent(p), p.name], p, `last bought ${dayIso(last)}`]); }
+    } else if (method === "occasions") {
+      for (const p of people) {
+        let best = null;
+        for (const kind of ["birthday", "anniversary"]) {
+          const md = monthDay(p[kind] || "");
+          if (!md) continue;
+          const occ = nextOccurrence(md, today), days = occ - today;
+          if (days <= 30 && (best === null || days < best[0])) best = [days, `${kind} on ${dayIso(occ)}`];
+        }
+        if (best) found.push([[best[0], p.name], p, best[1]]);
+      }
+    } else if (method === "top") {
+      for (const p of people) if (spent(p) > 0) found.push([[-spent(p), p.name], p, `spent ₹${fmtInr(spent(p))}`]);
+    } else {
+      const keys = customKeywords(query || "");
+      for (const p of people) {
+        const have = new Set(KB.terms([p.name || "", p.city || "", p.interest || ""].join(" ")));
+        if (keys.length && keys.every((k) => have.has(k))) found.push([[-spent(p), p.name], p, p.interest ? `likes ${p.interest}` : "matches your idea"]);
+      }
+    }
+    found.sort((x, y) => compareKeys(x[0], y[0]));
+    const leads = found.slice(0, 3).map(([, p, why]) => ({ name: p.name, city: p.city || "", why }));
+    const out = { success: true, method, count: found.length, leads };
+    if (method === "custom") out.query = query;
+    return [true, out];
+  }
+
+  // ---------------------------------------------------------------- sandbox tools
 
   function firstRun(now, hh, mm, repeat) {
     let d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
@@ -832,6 +1152,9 @@
       return [true, { success: true, path, lines: lines.length, preview: lines.slice(0, 2).join("\n").slice(0, 120) }];
     }
     _file_list() { return [true, { success: true, files: Object.keys(this.files).sort() }]; }
+    _kb_search({ query }) { return [true, { success: true, ...kbSearch(query) }]; }
+    _gst_calculate({ amount, rate, inclusive }) { return gstCalculate(amount, rate, inclusive || false); }
+    _leads_find({ method, query }) { return findLeads(this.files, this.now(), method, query); }
     /** Reminders whose time has come: one-time ones are removed, recurring ones move to their next run. */
     due(now) {
       const fired = [];
@@ -871,6 +1194,21 @@
     const parts = items.map((x) => `${x.task} on ${x.next_run.replace("T", " at ")}` + ("repeat" in x ? " (repeats)" : ""));
     return `You have ${items.length} reminder${items.length > 1 ? "s" : ""}: ${parts.join("; ")}.`;
   }
+  const R_UNKNOWN = "I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business.";
+  const LEAD_DESC = { inactive: "no purchase in 3 months", occasions: "birthday or anniversary in 30 days",
+    top: "top customers, ask them for referrals", custom: "your idea" };
+  function gstMsg(res) {
+    const r = fmtRate(toPaise(res.rate)), [a, g, c, sg] = ["amount", "gst", "cgst", "sgst"].map((k) => fmtInr(toPaise(res[k])));
+    if (res.inclusive) return `₹${a} includes ₹${g} GST at ${r}% (CGST ₹${c} + SGST ₹${sg}). Price before GST: ₹${fmtInr(toPaise(res.taxable_value))}.`;
+    return `GST at ${r}% on ₹${a} is ₹${g} (CGST ₹${c} + SGST ₹${sg}). Total: ₹${fmtInr(toPaise(res.total))}.`;
+  }
+  function leadsMsg(res) {
+    const desc = LEAD_DESC[res.method], n = res.count, leads = res.leads;
+    if (n === 0) return res.method === "custom" ? `I didn't find any customers matching "${res.query}" in customers.csv.`
+      : `I didn't find any leads (${desc}) in customers.csv.`;
+    const items = leads.map((x) => (x.city ? `${x.name} (${x.city}, ${x.why})` : `${x.name} (${x.why})`)).join("; ");
+    return `Found ${n} lead${n !== 1 ? "s" : ""} (${desc}): ${items}.${n > leads.length ? ` Showing ${leads.length}.` : ""}`;
+  }
   function answerFromResult(events) {
     for (let i = events.length - 1; i > 0; i--) {
       const ev = events[i];
@@ -886,6 +1224,9 @@
         if (tool === "notes.create") return "Saved the note.";
         if (tool === "file.read") return `${res.path} has ${res.lines} lines. It starts with: ${res.preview.split("\n")[0]}`;
         if (tool === "file.list") return `You have ${res.files.length} files: ${res.files.join(", ")}.`;
+        if (tool === "kb.search") return res.found ? res.answer : R_UNKNOWN;
+        if (tool === "gst.calculate") return gstMsg(res);
+        if (tool === "leads.find") return leadsMsg(res);
       } catch (e) { return null; }
       return null;
     }
@@ -898,6 +1239,24 @@
     const expected = answerFromResult(events), text = action.result || "";
     if (expected === null || text === expected || (expected.startsWith(text) && text.endsWith("."))) return null;
     return expected;
+  }
+
+  /** The "which file?" question after a failed file.read and a file.list, stated from those results. */
+  function correctedQuestion(action, events) {
+    if (action.type !== "ask_user" || !(action.question || "").startsWith("I couldn't find")) return null;
+    let files = null, path = null;
+    for (let i = events.length - 1; i > 0; i--) {
+      const ev = events[i];
+      if (ev.type === "user") break;
+      const prev = events[i - 1], call = prev.type === "arouse" ? prev.turn.action : {};
+      if (ev.type === "tool_result" && call.tool === "file.list" && files === null) files = ev.content.files || [];
+      if (ev.type === "tool_error" && call.tool === "file.read" && files !== null) { path = call.arguments.path; break; }
+    }
+    if (files === null || !path) return null;
+    const stem = path.includes(".") ? path.slice(0, path.lastIndexOf(".")) : path, cands = files.filter((f) => f.startsWith(stem + "_"));
+    const expected = cands.length ? `I couldn't find ${path}. Did you mean ${cands[0]}?`
+      : `I couldn't find ${path}. Which file should I use? Available: ${files.join(", ")}.`;
+    return action.question === expected ? null : expected;
   }
 
   // ---------------------------------------------------------------- runtime
@@ -971,6 +1330,9 @@
       const fixed = this.retries ? correctedConfirmation(res.turn.action, events) : null; // system mode only
       if (fixed) res = { ...res, rewritten: true, turn: { action: { type: "finish", result: fixed }, plan: res.turn.plan,
         verify: "runtime: confirmation written from the tool result" } };
+      const question = this.retries ? correctedQuestion(res.turn.action, events) : null;
+      if (question) res = { ...res, rewritten: true, turn: { action: { type: "ask_user", question }, plan: res.turn.plan,
+        verify: "runtime: question written from the tool results" } };
       if (this.guardCompletion && res.turn.action.type === "finish" && lastObservation(events) === "tool_error") {
         return { ...res, guarded: true, turn: { action: { type: "fail", error: "The last step failed, so the task was not completed." },
           plan: res.turn.plan, verify: "runtime guard: finish after a failed tool call" } };
@@ -1008,11 +1370,13 @@
   }
 
   async function loadArouse(base = "model/", onProgress = () => {}) {
-    const [cfg, tokSpec, vocabText] = await Promise.all([
+    const [cfg, tokSpec, vocabText, kb] = await Promise.all([
       fetch(base + "config.json").then((r) => r.json()),
       fetch(base + "tokenizer.json").then((r) => r.json()),
       fetch(base + "response_vocab.txt").then((r) => r.text()),
+      fetch(base + "knowledge.json").then((r) => r.json()),
     ]);
+    setKnowledge(kb);
     // weights.bin (raw float16), or base64 text where a host only serves text files
     const resp = await fetch(base + (cfg.weights_file || "weights.bin"));
     if (!resp.ok) throw new Error(`weights: HTTP ${resp.status}`);
@@ -1044,6 +1408,7 @@
 
   const api = { S, Tokenizer, Model, Engine, Runtime, Sandbox, CopyConstraint, ProtocolError, loadArouse, buildContext,
     calendarText, encodePrompt, encodeTurnBody, decodeTurn, canonicalJson, validateCall, groundingIssue, answerIssue,
-    copiedFrom, mentionedDates, answerFromResult, correctedConfirmation, TOOL_NAMES, SYSTEM_PROMPT, fmtDT, firstRun };
+    copiedFrom, mentionedDates, answerFromResult, correctedConfirmation, setKnowledge, kbSearch, gstCalculate, findLeads,
+    parseAmount, parseRate, fmtInr, customKeywords, labelEnd, mentionedTimes, gstMentions, correctedQuestion, TOOL_NAMES, SYSTEM_PROMPT, fmtDT, firstRun };
   root.Arouse = api;
 })(typeof self !== "undefined" ? self : this);

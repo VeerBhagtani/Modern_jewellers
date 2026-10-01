@@ -24,9 +24,11 @@ import torch
 
 from arouse.agent.context import WEEKDAYS, next_weekday_date
 from arouse.agent.grounding import copied_from, current_request
+from arouse.agent.mentions import gst_mentions, mentioned_times
 from arouse.tokenizer import ArouseTokenizer, Special
 
-_OPEN = re.compile(r'"(task|text|query|path|date)":"((?:[^"\\]|\\.)*)$')
+_OPEN = re.compile(r'"(task|text|query|path|date|time|amount|rate)":"((?:[^"\\]|\\.)*)$')
+_CHOICE_FIELDS = ("date", "time", "amount", "rate")  # values chosen from a fixed list of candidates
 _MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
            "november", "december"]
 _MONTH_RE = "|".join(sorted({*_MONTHS, *(m[:3] for m in _MONTHS), "sept"}, key=len, reverse=True))
@@ -153,6 +155,16 @@ class CopyConstraint:
                      if ev["type"] == "arouse" and ev["turn"]["action"]["type"] == "ask_user"]
             dates = referenced_dates(said + asked, datetime.strptime(context["now"][:16], "%Y-%m-%dT%H:%M")) or dates
         self.dates = sorted(dates)
+        amounts, rates = gst_mentions(req)
+        self.path_spans = set()
+        for src in said:  # "vet_visits.txt" in "Count the lines in vet_visits.txt." (never "vet_visits.")
+            for i, ch in enumerate(src):
+                if ch.isalnum() and (i == 0 or not (src[i - 1].isalnum() or src[i - 1] in "_-./\\")):
+                    m = _STOP_PATH.search(src[i:])
+                    span = src[i:i + m.start()] if m else src[i:]
+                    if "." in span:
+                        self.path_spans.add(span)
+        self.choices = {"date": self.dates, "time": sorted(mentioned_times(said)), "amount": sorted(amounts), "rate": sorted(rates)}
 
     def open_field(self, generated: list[int]) -> tuple[str, str, str] | None:
         """(field, partial value, body so far) if the model is inside a constrained string."""
@@ -168,8 +180,8 @@ class CopyConstraint:
     @staticmethod
     def next_after_close(field: str, body: str) -> str:
         """JSON character that must follow the closing quote (keys are canonical-sorted:
-        date, in_minutes, repeat, task, time)."""
-        if field == "date":
+        date, in_minutes, repeat, task, time; amount, inclusive, rate)."""
+        if field in ("date", "amount"):
             return ","
         if field == "task" and '"scheduler.create"' in body and '"in_minutes"' not in body:
             return ","  # "time" always follows "task" unless the reminder is relative
@@ -177,8 +189,8 @@ class CopyConstraint:
 
     def continuations(self, field: str, partial: str) -> list[str]:
         """What may follow `partial` in each source (the value must start at a word start)."""
-        if field == "date":
-            return [d[len(partial):] for d in self.dates if d.startswith(partial) and d != partial]
+        if field in _CHOICE_FIELDS:
+            return [d[len(partial):] for d in self.choices[field] if d.startswith(partial) and d != partial]
         out = []
         word = (lambda ch: ch.isalnum() or ch in "_-./\\") if field == "path" else str.isalnum
         for src in self.sources[field]:
@@ -214,12 +226,12 @@ class CopyConstraint:
         return out
 
     def complete(self, field: str, value: str) -> bool:
-        if field == "date":
-            return value in self.dates
+        if field in _CHOICE_FIELDS:
+            return value in self.choices[field]
         if not value.strip() or value != value.strip():
             return False
-        if field == "path":
-            return value in self.listed or ("." in value and any(value in s for s in self.sources["path"]))
+        if field == "path":  # a whole file name: listed by a tool, or ending where the name ends in the message
+            return value in self.listed or value in self.path_spans
         if field in ("text", "query"):  # notes and queries are copied verbatim to the end of the sentence
             return any(value == src[i:i + len(value)] and _ends_sentence(src[i + len(value):])
                        and label_end(src) in (None, i)
@@ -237,8 +249,10 @@ class CopyConstraint:
 
     def __call__(self, generated: list[int], logits: torch.Tensor) -> torch.Tensor:
         state = self.open_field(generated)
-        if state is None or (state[0] == "date" and not self.dates) or (state[0] != "date" and not self.sources[state[0]]):
+        if state is None:
             return logits
+        if state[0] in _CHOICE_FIELDS and not self.choices[state[0]] or state[0] not in _CHOICE_FIELDS and not self.sources[state[0]]:
+            return logits  # nothing to choose from: leave the model free
         field, partial, body = state
         allowed: set[int] = set()
         for rest in self.continuations(field, partial):

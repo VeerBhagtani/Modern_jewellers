@@ -1,0 +1,2326 @@
+{
+  "benchmark": "arouse-agentbench-v1",
+  "file": "benchmarks/agentbench_v1/test.jsonl",
+  "model": {
+    "name": "arouse-agent-s",
+    "num_parameters": 5475584,
+    "context_length": 1024,
+    "vocab_size": 4096,
+    "tokenizer_fingerprint": "6b6a9b5f8ac402c8",
+    "trained": true,
+    "train_steps": 4000,
+    "device": "cpu"
+  },
+  "decisions": {
+    "mode": "raw",
+    "decisions": 1198,
+    "decision_accuracy": 67.36,
+    "structured_output_validity": 91.57,
+    "action_type_accuracy": 87.98,
+    "tool_selection_accuracy": 88.53,
+    "argument_exact_accuracy": 43.98,
+    "scheduling_exact_accuracy": 29.13,
+    "ask_rate_on_ambiguous": 93.46,
+    "false_completion_rate": 0.0,
+    "response_text_exact": 55.5,
+    "counts": {
+      "decisions": 1198,
+      "valid": 1097,
+      "type_ok": 1054,
+      "correct": 807,
+      "gold_tool_calls": 532,
+      "tool_ok": 471,
+      "args_ok": 234,
+      "after_error": 41,
+      "false_completion": 0,
+      "ambiguous": 107,
+      "asked": 100,
+      "text_cmp": 573,
+      "text_exact": 318,
+      "sched": 309,
+      "sched_ok": 90
+    },
+    "by_skill": {
+      "intent": {
+        "accuracy": 65.32,
+        "n": 865
+      },
+      "tool_selection": {
+        "accuracy": 44.19,
+        "n": 482
+      },
+      "argument_generation": {
+        "accuracy": 31.81,
+        "n": 415
+      },
+      "scheduling": {
+        "accuracy": 28.97,
+        "n": 290
+      },
+      "multi_step": {
+        "accuracy": 73.0,
+        "n": 100
+      },
+      "task_state": {
+        "accuracy": 55.88,
+        "n": 136
+      },
+      "error_recovery": {
+        "accuracy": 75.76,
+        "n": 66
+      },
+      "ambiguity": {
+        "accuracy": 93.46,
+        "n": 107
+      },
+      "completion_verification": {
+        "accuracy": 83.51,
+        "n": 461
+      },
+      "structured_output": {
+        "accuracy": 67.36,
+        "n": 1198
+      }
+    },
+    "by_category": {
+      "ambiguity": {
+        "accuracy": 75.23,
+        "n": 109
+      },
+      "ambiguity_followup": {
+        "accuracy": 67.39,
+        "n": 230
+      },
+      "chat": {
+        "accuracy": 70.48,
+        "n": 105
+      },
+      "delete": {
+        "accuracy": 67.84,
+        "n": 171
+      },
+      "file": {
+        "accuracy": 74.18,
+        "n": 182
+      },
+      "file_error": {
+        "accuracy": 81.08,
+        "n": 37
+      },
+      "list": {
+        "accuracy": 80.38,
+        "n": 158
+      },
+      "note": {
+        "accuracy": 62.28,
+        "n": 114
+      },
+      "out_of_scope": {
+        "accuracy": 64.15,
+        "n": 53
+      },
+      "scheduling_one_time": {
+        "accuracy": 58.33,
+        "n": 432
+      },
+      "scheduling_recurring": {
+        "accuracy": 67.27,
+        "n": 333
+      },
+      "scheduling_relative": {
+        "accuracy": 57.14,
+        "n": 133
+      }
+    },
+    "failures": [
+      {
+        "episode": "test-9001-0",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "vet_visits.txt"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "milk_2020.csv"
+          }
+        },
+        "raw": "<|plan|>Read milk_2020.csv.<|tool_call|>{\"tool\":\"file.read\",\"arguments\":{\"path\":\"milk_2020.csv\"}}"
+      },
+      {
+        "episode": "test-9001-1",
+        "turn": 1,
+        "gold": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to order spare pump parts."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-1"
+          }
+        },
+        "raw": "<|verify|>'order the pumpafile' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
+      },
+      {
+        "episode": "test-9001-4",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "test the backup generator",
+            "in_minutes": 45
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "in_minutes": 45,
+            "task": "test the laptop"
+          }
+        },
+        "raw": "<|plan|>Relative reminder in 45 minutes.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"in_minutes\":45,\"task\":\"test the laptop\"}}"
+      },
+      {
+        "episode": "test-9001-6",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "renew the gym membership",
+            "date": "2027-09-15",
+            "time": "05:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-09-15",
+            "task": "renew the gym",
+            "time": "05:00"
+          }
+        },
+        "raw": "<|plan|>September 15 is 2027-09-15. One-time reminder on 2027-09-15 at 05:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-09-15\",\"task\":\"renew the gym\",\"time\":\"05:00\"}}"
+      },
+      {
+        "episode": "test-9001-6",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the hay supplier raised prices"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the hay supplier needs repair"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"the hay supplier needs repair\"}}"
+      },
+      {
+        "episode": "test-9001-10",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "vet_visits.txt"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "milk_2020.csv"
+          }
+        },
+        "raw": "<|plan|>Read milk_2020.csv.<|tool_call|>{\"tool\":\"file.read\",\"arguments\":{\"path\":\"milk_2020.csv\"}}"
+      },
+      {
+        "episode": "test-9001-12",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "payments.csv"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "sales.csv"
+          }
+        },
+        "raw": "<|plan|>Read sales.csv.<|tool_call|>{\"tool\":\"file.read\",\"arguments\":{\"path\":\"sales.csv\"}}"
+      },
+      {
+        "episode": "test-9001-13",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "clean the air filter",
+            "date": "2026-10-02",
+            "time": "14:15"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-10-02",
+            "task": "clean the6 filter",
+            "time": "14:15"
+          }
+        },
+        "raw": "<|plan|>October 2 is 2026-10-02. One-time reminder on 2026-10-02 at 14:15.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-10-02\",\"task\":\"clean the6 filter\",\"time\":\"14:15\"}}"
+      },
+      {
+        "episode": "test-9001-14",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "order ear tags",
+            "in_minutes": 480
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "in_minutes": 480,
+            "task": "order ear newtant"
+          }
+        },
+        "raw": "<|plan|>Relative reminder in 480 minutes.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"in_minutes\":480,\"task\":\"order ear newtant\"}}"
+      },
+      {
+        "episode": "test-9001-14",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "call the vet about the lame cow",
+            "in_minutes": 480
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "in_minutes": 480,
+            "task": "call the vet about the laking cow"
+          }
+        },
+        "raw": "<|plan|>Relative reminder in 480 minutes.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"in_minutes\":480,\"task\":\"call the vet about the laking cow\"}}"
+      },
+      {
+        "episode": "test-9001-15",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "payments.csv"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "sales.csv"
+          }
+        },
+        "raw": "<|plan|>Read sales.csv.<|tool_call|>{\"tool\":\"file.read\",\"arguments\":{\"path\":\"sales.csv\"}}"
+      },
+      {
+        "episode": "test-9001-15",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the pregnancy test results for cow 12",
+            "time": "05:40",
+            "repeat": {
+              "freq": "weekly",
+              "by_day": [
+                "SA",
+                "SU"
+              ]
+            }
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"What time should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-17",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "return the library books",
+            "date": "2026-08-16",
+            "time": "13:10"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-08-16",
+            "task": "return the library'books",
+            "time": "13:10"
+          }
+        },
+        "raw": "<|plan|>Sunday is 2026-08-16. One-time reminder on 2026-08-16 at 13:10.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-08-16\",\"task\":\"return the library'books\",\"time\":\"13:10\"}}"
+      },
+      {
+        "episode": "test-9001-19",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "buy a birthday gift",
+            "date": "2026-06-15",
+            "time": "18:40"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-06-15",
+            "task": "buy a birthday",
+            "time": "13:40"
+          }
+        },
+        "raw": "<|plan|>June 15 is 2026-06-15. One-time reminder on 2026-06-15 at 13:40.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-06-15\",\"task\":\"buy a birthday\",\"time\":\"13:40\"}}"
+      },
+      {
+        "episode": "test-9001-20",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "order spare pump parts",
+            "date": "2026-03-25",
+            "time": "08:50"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "Which GST rate should I use? For example 3% for gold, 5% or 18%."
+        },
+        "raw": "<|plan|>The GST rate is missing, so I should ask.<|ask_user|>{\"question\":\"Which GST rate should I use? For example 3% for gold, 5% or 18%.\"}"
+      },
+      {
+        "episode": "test-9001-20",
+        "turn": 6,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "clean the air filter",
+            "date": "2026-03-20",
+            "time": "08:50"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-03-20",
+            "task": "clean the% filter",
+            "time": "08:50"
+          }
+        },
+        "raw": "<|plan|>Tomorrow is 2026-03-20. One-time reminder on 2026-03-20 at 08:50.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-03-20\",\"task\":\"clean the% filter\",\"time\":\"08:50\"}}"
+      },
+      {
+        "episode": "test-9001-21",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-21",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-1"
+          }
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Reminder set: drop the pay the credit card bill on 2027-08-06 at 15:50; buy the cred r-08-11 at 02:50."
+        },
+        "raw": "<|verify|>'drop the pay the cred r-1.<|finish|>{\"result\":\"Reminder set: drop the pay the credit card bill on 2027-08-06 at 15:50; buy the cred r-08-11 at 02:50.\"}"
+      },
+      {
+        "episode": "test-9001-22",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "renew the gym membership",
+            "in_minutes": 180
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "in_minutes": 180,
+            "task": "renew the gym"
+          }
+        },
+        "raw": "<|plan|>Relative reminder in 180 minutes.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"in_minutes\":180,\"task\":\"renew the gym\"}}"
+      },
+      {
+        "episode": "test-9001-24",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "clean the solar panels",
+            "date": "2026-02-01",
+            "time": "08:50"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-01-04",
+            "task": "clean the solar panels",
+            "time": "05:50"
+          }
+        },
+        "raw": "<|plan|>Sunday is 2026-01-04. One-time reminder on 2026-01-04 at 05:50.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-01-04\",\"task\":\"clean the solar panels\",\"time\":\"05:50\"}}"
+      },
+      {
+        "episode": "test-9001-25",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "test the backup generator",
+            "date": "2027-02-13",
+            "time": "07:10"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-02-13",
+            "task": "test the laptop",
+            "time": "07:10"
+          }
+        },
+        "raw": "<|plan|>Tomorrow is 2027-02-13. One-time reminder on 2027-02-13 at 07:10.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-02-13\",\"task\":\"test the laptop\",\"time\":\"07:10\"}}"
+      },
+      {
+        "episode": "test-9001-26",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the pump makes a strange noise"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the pump makes a stcca"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"the pump makes a stcca\"}}"
+      },
+      {
+        "episode": "test-9001-26",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "buy a birthday gift",
+            "date": "2027-11-07",
+            "time": "20:40"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-11-07",
+            "task": "buy a birthday",
+            "time": "20:40"
+          }
+        },
+        "raw": "<|plan|>Tomorrow is 2027-11-07. One-time reminder on 2027-11-07 at 20:40.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-11-07\",\"task\":\"buy a birthday\",\"time\":\"20:40\"}}"
+      },
+      {
+        "episode": "test-9001-26",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "buy a birthday gift",
+            "date": "2027-11-07",
+            "time": "20:40"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-11-07",
+            "task": "buy a birthday",
+            "time": "20:40"
+          }
+        },
+        "raw": "<|verify|>The scheduler failed with a retryable error; retry once.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-11-07\",\"task\":\"buy a birthday\",\"time\":\"20:40\"}}"
+      },
+      {
+        "episode": "test-9001-27",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the pregnancy test results for cow 12",
+            "date": "2026-05-12",
+            "time": "13:40"
+          }
+        },
+        "pred": null,
+        "raw": "<|plan|>Tuesday is 2026-05-18. One-time reminder on 2026-05-18 at 13:40.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-05-18\",\"task\":\"check the pre7, repeating every Tuesday\",\"WE\"],\"freq\":\"weekly\"},\"task\":\"check the pre7, so I should ask them tomorrow at 13:40.\"}"
+      },
+      {
+        "episode": "test-9001-29",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "test the backup generator",
+            "date": "2026-09-24",
+            "time": "10:15"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-09-24",
+            "task": "test the laptop",
+            "time": "10:15"
+          }
+        },
+        "raw": "<|plan|>Tomorrow is 2026-09-24. One-time reminder on 2026-09-24 at 10:15.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-09-24\",\"task\":\"test the laptop\",\"time\":\"10:15\"}}"
+      },
+      {
+        "episode": "test-9001-30",
+        "turn": 1,
+        "gold": {
+          "type": "finish",
+          "result": "You have 4 files: invoices.csv, payments.csv, sales.csv, suppliers.csv."
+        },
+        "pred": null,
+        "raw": "<|verify|>file.list succeeded.<|finish|>{\"result\":\"You have 4 files: invoices.csv, salary slips.csv, sales.csv,su<|tool_call|>{\"tool\":\"file.read\",\"arguments\":{\"path\":\"invoices.csv\"}}"
+      },
+      {
+        "episode": "test-9001-31",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "sharpen the knives",
+            "date": "2026-07-08",
+            "time": "11:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the kniReminder set"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"the kniReminder set\"}}"
+      },
+      {
+        "episode": "test-9001-31",
+        "turn": 3,
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: sharpen the knives on 2026-07-08 at 11:00."
+        },
+        "pred": null,
+        "raw": "<|verify|>scheduler.create succeeded (task_id r-3).<|finish|>{\"result\":\"Reminder set: sharpen the kni"
+      },
+      {
+        "episode": "test-9001-35",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "test the backup generator",
+            "date": "2027-11-07",
+            "time": "11:10"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-11-04",
+            "task": "test the laptop",
+            "time": "11:10"
+          }
+        },
+        "raw": "<|plan|>Sunday is 2027-11-04. One-time reminder on 2027-11-04 at 11:10.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-11-04\",\"task\":\"test the laptop\",\"time\":\"11:10\"}}"
+      },
+      {
+        "episode": "test-9001-40",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "call the vet about the lame cow",
+            "in_minutes": 15
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "in_minutes": 15,
+            "task": "call the vet's the lak-06-15"
+          }
+        },
+        "raw": "<|plan|>Relative reminder in 15 minutes.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"in_minutes\":15,\"task\":\"call the vet's the lak-06-15\"}}"
+      },
+      {
+        "episode": "test-9001-42",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "herd.csv"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "yield.csv"
+          }
+        },
+        "raw": "<|plan|>Read yield.csv.<|tool_call|>{\"tool\":\"file.read\",\"arguments\":{\"path\":\"yield.csv\"}}"
+      },
+      {
+        "episode": "test-9001-44",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the tyre pressure",
+            "time": "06:00",
+            "repeat": {
+              "freq": "weekly",
+              "by_day": [
+                "TH"
+              ]
+            }
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "repeat": {
+              "by_day": [
+                "TH"
+              ],
+              "freq": "weekly"
+            },
+            "task": "check the tyre",
+            "time": "06:00"
+          }
+        },
+        "raw": "<|plan|>Recurring reminder every Thursday at 06:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"by_day\":[\"TH\"],\"freq\":\"weekly\"},\"task\":\"check the tyre\",\"time\":\"06:00\"}}"
+      },
+      {
+        "episode": "test-9001-45",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-11-20",
+            "task": "inspect the hay bales",
+            "time": "20:00"
+          }
+        },
+        "raw": "<|plan|>November 20 is 2026-11-20. One-time reminder on 2026-11-20 at 20:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-11-20\",\"task\":\"inspect the hay bales\",\"time\":\"20:00\"}}"
+      },
+      {
+        "episode": "test-9001-46",
+        "turn": 2,
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: renew the gym membership."
+        },
+        "pred": null,
+        "raw": "<|verify|>scheduler.delete succeeded for r-2.<|finish|>{\"result\":\"Deleted the reminder: renew the gym'.<|fail|>{\"error\":\"I couldn't find a reminder top me your own idea.\"}"
+      },
+      {
+        "episode": "test-9001-47",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the tyre pressure",
+            "date": "2027-02-28",
+            "time": "05:15"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-02-28",
+            "task": "check the tyre",
+            "time": "05:15"
+          }
+        },
+        "raw": "<|plan|>Sunday is 2027-02-28. One-time reminder on 2027-02-28 at 05:15.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-02-28\",\"task\":\"check the tyre\",\"time\":\"05:15\"}}"
+      },
+      {
+        "episode": "test-9001-47",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "water the vegetable garden",
+            "time": "21:00"
+          }
+        },
+        "pred": null,
+        "raw": "<|plan|>One-time reminder at the next 21:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"task\":\"water thepurtask\":\"water thepurtask\":\"water thepurtask_id r-0).<|finish|>{\"result\":\"Reminder set:00 the withoutscheduler.create succeeded (task\":\"water the withoutscheduler.delete succeeded (task"
+      },
+      {
+        "episode": "test-9001-47",
+        "turn": 3,
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: water the vegetable garden on 2027-02-22 at 21:00."
+        },
+        "pred": null,
+        "raw": "<|verify|>scheduler.create succeeded (task_id r-4).<|finish|>{\"result\":\"Reminder set: water the retryon't find a reminder to thetageod'.<|fail|>{\"error\":\"I couldn't find a reminder to water theMgeod.\"}"
+      },
+      {
+        "episode": "test-9001-47",
+        "turn": 4,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "test the backup generator",
+            "date": "2027-02-23",
+            "time": "08:30"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-02-23",
+            "task": "test the laptop",
+            "time": "08:30"
+          }
+        },
+        "raw": "<|plan|>Tomorrow is 2027-02-23. One-time reminder on 2027-02-23 at 08:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-02-23\",\"task\":\"test the laptop\",\"time\":\"08:30\"}}"
+      },
+      {
+        "episode": "test-9001-48",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "Submit the subsidy application",
+            "date": "2026-07-19",
+            "time": "20:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-07-18",
+            "task": "S my the subsidy application application",
+            "time": "20:00"
+          }
+        },
+        "raw": "<|plan|>Sunday is 2026-07-18. One-time reminder on 2026-07-18 at 20:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-07-18\",\"task\":\"S my the subsidy application application\",\"time\":\"20:00\"}}"
+      }
+    ]
+  },
+  "decisions_system": {
+    "mode": "system",
+    "decisions": 1198,
+    "decision_accuracy": 94.82,
+    "structured_output_validity": 99.83,
+    "action_type_accuracy": 96.33,
+    "tool_selection_accuracy": 93.61,
+    "argument_exact_accuracy": 92.29,
+    "scheduling_exact_accuracy": 92.56,
+    "ask_rate_on_ambiguous": 93.46,
+    "false_completion_rate": 0.0,
+    "response_text_exact": 88.22,
+    "counts": {
+      "decisions": 1198,
+      "valid": 1196,
+      "type_ok": 1154,
+      "correct": 1136,
+      "gold_tool_calls": 532,
+      "tool_ok": 498,
+      "args_ok": 491,
+      "after_error": 41,
+      "false_completion": 0,
+      "ambiguous": 107,
+      "asked": 100,
+      "text_cmp": 645,
+      "text_exact": 569,
+      "sched": 309,
+      "sched_ok": 286
+    },
+    "by_skill": {
+      "intent": {
+        "accuracy": 93.87,
+        "n": 865
+      },
+      "tool_selection": {
+        "accuracy": 92.12,
+        "n": 482
+      },
+      "argument_generation": {
+        "accuracy": 93.49,
+        "n": 415
+      },
+      "scheduling": {
+        "accuracy": 92.07,
+        "n": 290
+      },
+      "multi_step": {
+        "accuracy": 94.0,
+        "n": 100
+      },
+      "task_state": {
+        "accuracy": 96.32,
+        "n": 136
+      },
+      "error_recovery": {
+        "accuracy": 100.0,
+        "n": 66
+      },
+      "ambiguity": {
+        "accuracy": 93.46,
+        "n": 107
+      },
+      "completion_verification": {
+        "accuracy": 99.13,
+        "n": 461
+      },
+      "structured_output": {
+        "accuracy": 94.82,
+        "n": 1198
+      }
+    },
+    "by_category": {
+      "ambiguity": {
+        "accuracy": 91.74,
+        "n": 109
+      },
+      "ambiguity_followup": {
+        "accuracy": 96.09,
+        "n": 230
+      },
+      "chat": {
+        "accuracy": 94.29,
+        "n": 105
+      },
+      "delete": {
+        "accuracy": 86.55,
+        "n": 171
+      },
+      "file": {
+        "accuracy": 97.25,
+        "n": 182
+      },
+      "file_error": {
+        "accuracy": 94.59,
+        "n": 37
+      },
+      "list": {
+        "accuracy": 96.84,
+        "n": 158
+      },
+      "note": {
+        "accuracy": 98.25,
+        "n": 114
+      },
+      "out_of_scope": {
+        "accuracy": 77.36,
+        "n": 53
+      },
+      "scheduling_one_time": {
+        "accuracy": 95.6,
+        "n": 432
+      },
+      "scheduling_recurring": {
+        "accuracy": 97.0,
+        "n": 333
+      },
+      "scheduling_relative": {
+        "accuracy": 93.98,
+        "n": 133
+      }
+    },
+    "failures": [
+      {
+        "episode": "test-9001-15",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the pregnancy test results for cow 12",
+            "time": "05:40",
+            "repeat": {
+              "freq": "weekly",
+              "by_day": [
+                "SA",
+                "SU"
+              ]
+            }
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"What time should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-20",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "order spare pump parts",
+            "date": "2026-03-25",
+            "time": "08:50"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "Which GST rate should I use? For example 3% for gold, 5% or 18%."
+        },
+        "raw": "<|plan|>The GST rate is missing, so I should ask.<|ask_user|>{\"question\":\"Which GST rate should I use? For example 3% for gold, 5% or 18%.\"}"
+      },
+      {
+        "episode": "test-9001-21",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-21",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-1"
+          }
+        },
+        "pred": {
+          "type": "finish",
+          "result": "You have 2 reminders: pay the credit card bill on 2027-08-06 at 15:50 (repeats); buy a birthday gift on 2027-08-11 at 02:50."
+        },
+        "raw": "<|verify|>'drop the pay the cred r-2.<|finish|>{\"result\":\"I couldn't find a reminder to drop the pay the credit.\"}"
+      },
+      {
+        "episode": "test-9001-31",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "sharpen the knives",
+            "date": "2026-07-08",
+            "time": "11:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "sharpen the knives"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"sharpen the knives\"}}"
+      },
+      {
+        "episode": "test-9001-45",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-11-20",
+            "task": "inspect the hay bales",
+            "time": "20:00"
+          }
+        },
+        "raw": "<|plan|>November 20 is 2026-11-20. One-time reminder on 2026-11-20 at 20:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-11-20\",\"task\":\"inspect the hay bales\",\"time\":\"20:00\"}}"
+      },
+      {
+        "episode": "test-9001-65",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the pregnancy test results for cow 12",
+            "date": "2027-12-16",
+            "time": "18:00"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"What time should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-66",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9001-67",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the pregnancy test results for cow 12",
+            "date": "2027-06-19",
+            "time": "21:30"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "What should I remind you about?"
+        },
+        "raw": "<|plan|>The reminder text is missing, so I should ask.<|ask_user|>{\"question\":\"What should I remind you about?\"}"
+      },
+      {
+        "episode": "test-9001-78",
+        "turn": 3,
+        "gold": {
+          "type": "finish",
+          "result": "I can't help with that yet. I can set reminders, list or cancel them, take notes and read your files."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "what's the stock price of Tata Motors"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"what's the stock price of Tata Motors\"}}"
+      },
+      {
+        "episode": "test-9001-79",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "renew the gym membership",
+            "date": "2027-09-25",
+            "time": "09:15"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the gym membership"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"the gym membership\"}}"
+      },
+      {
+        "episode": "test-9001-84",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "pay the school fees",
+            "time": "10:00",
+            "repeat": {
+              "freq": "monthly",
+              "by_month_day": [
+                15
+              ]
+            }
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "repeat": {
+              "by_month_day": [
+                15
+              ],
+              "freq": "monthly"
+            },
+            "task": "pay the school fees",
+            "time": "22:00"
+          }
+        },
+        "raw": "<|plan|>Recurring reminder on the 15th of every month at 22:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"by_month_day\":[15],\"freq\":\"monthly\"},\"task\":\"pay the school fees\",\"time\":\"22:00\"}}"
+      },
+      {
+        "episode": "test-9001-85",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "inspect the hay bales",
+            "date": "2027-03-20",
+            "time": "09:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "inspect the hay bales"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"inspect the hay bales\"}}"
+      },
+      {
+        "episode": "test-9001-86",
+        "turn": 0,
+        "gold": {
+          "type": "finish",
+          "result": "I can't help with that yet. I can set reminders, list or cancel them, take notes and read your files."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "What's the population of Mumbai"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"What's the population of Mumbai\"}}"
+      },
+      {
+        "episode": "test-9001-102",
+        "turn": 0,
+        "gold": {
+          "type": "finish",
+          "result": "I can't help with that yet. I can set reminders, list or cancel them, take notes and read your files."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "what's the population of Mumbai"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"what's the population of Mumbai\"}}"
+      },
+      {
+        "episode": "test-9001-111",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "sharpen the knives",
+            "date": "2027-03-25",
+            "time": "12:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "sharpen the knives"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"sharpen the knives\"}}"
+      },
+      {
+        "episode": "test-9001-121",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-127",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9001-128",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the rainfall gauge",
+            "in_minutes": 30
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-130",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-05-20",
+            "task": "check the pregnancy test results for cow 12",
+            "time": "12:00"
+          }
+        },
+        "raw": "<|plan|>Tomorrow is 2026-05-20. One-time reminder on 2026-05-20 at 12:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-05-20\",\"task\":\"check the pregnancy test results for cow 12\",\"time\":\"12:00\"}}"
+      },
+      {
+        "episode": "test-9001-139",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-141",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "inspect the hay bales",
+            "date": "2026-08-25",
+            "time": "06:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "inspect the hay bales"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"inspect the hay bales\"}}"
+      },
+      {
+        "episode": "test-9001-144",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-145",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the tyre pressure",
+            "in_minutes": 30
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-155",
+        "turn": 3,
+        "gold": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to water the vegetable garden."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "You have 2 reminders: clean the solar panels on 2027-08-17 at 11:30; test the backup generator on 2027-08-20 at 08:00."
+        },
+        "raw": "<|verify|>'drop the water'sm\ufffd\ufffd81.<|finish|>{\"result\":\"I didn't find a reminder.\"}"
+      },
+      {
+        "episode": "test-9001-156",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9001-166",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "water the vegetable garden",
+            "time": "08:30",
+            "repeat": {
+              "freq": "daily"
+            }
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "water the vegetable garden",
+            "time": "08:30"
+          }
+        },
+        "raw": "<|plan|>One-time reminder at the next 08:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"task\":\"water the vegetable garden\",\"time\":\"08:30\"}}"
+      },
+      {
+        "episode": "test-9001-177",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "send the photos to Priya",
+            "in_minutes": 60
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9001-191",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the pregnancy test results for cow 12",
+            "time": "12:00"
+          }
+        },
+        "raw": "<|plan|>One-time reminder at the next 12:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"task\":\"check the pregnancy test results for cow 12\",\"task\":\"check the pregnancy test results for cow 12\",\"time\":\"12:00\"}}"
+      },
+      {
+        "episode": "test-9001-192",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-194",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "buy a birthday gift",
+            "time": "18:40",
+            "repeat": {
+              "freq": "daily"
+            }
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "buy a birthday gift",
+            "time": "18:40"
+          }
+        },
+        "raw": "<|plan|>One-time reminder at the next 18:40.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"task\":\"buy a birthday gift\",\"time\":\"18:40\"}}"
+      },
+      {
+        "episode": "test-9001-200",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9001-213",
+        "turn": 1,
+        "gold": {
+          "type": "finish",
+          "result": "You have 2 reminders: call my brother on 2027-10-11 at 15:45; check the rainfall gauge on 2027-10-13 at 23:45 (repeats)."
+        },
+        "pred": null,
+        "raw": "<|verify|>scheduler.list returned 2.<|finish|>{\"result\":\"You have 2 reminders: call my"
+      },
+      {
+        "episode": "test-9001-214",
+        "turn": 0,
+        "gold": {
+          "type": "finish",
+          "result": "I can't help with that yet. I can set reminders, list or cancel them, take notes and read your files."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "What's the stock price of Tata Motors"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"What's the stock price of Tata Motors\"}}"
+      },
+      {
+        "episode": "test-9001-222",
+        "turn": 2,
+        "gold": {
+          "type": "finish",
+          "result": "I can set reminders, list or cancel them, take notes and read your files. For example: 'Remind me tomorrow at 8 AM to check sales.'"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Tell me what you can do"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Tell me what you can do\"}}"
+      },
+      {
+        "episode": "test-9001-224",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "inspect the hay bales",
+            "date": "2027-01-15",
+            "time": "18:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "inspect the hay bales"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"inspect the hay bales\"}}"
+      },
+      {
+        "episode": "test-9001-232",
+        "turn": 4,
+        "gold": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "suppliers.csv"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "sales.csv"
+          }
+        },
+        "raw": "<|plan|>Read prices.csv.<|tool_call|>{\"tool\":\"file.read\",\"arguments\":{\"path\":\"sales.csv\"}}"
+      },
+      {
+        "episode": "test-9001-235",
+        "turn": 3,
+        "gold": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to check the smoke alarm."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-2"
+          }
+        },
+        "raw": "<|verify|>'drop the check the sm main2.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-2\"}}"
+      },
+      {
+        "episode": "test-9001-244",
+        "turn": 0,
+        "gold": {
+          "type": "finish",
+          "result": "I can't help with that yet. I can set reminders, list or cancel them, take notes and read your files."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "what's the stock price of Tata Motors"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"what's the stock price of Tata Motors\"}}"
+      },
+      {
+        "episode": "test-9001-247",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      }
+    ]
+  },
+  "end_to_end": {
+    "episodes": 400,
+    "task_success_rate": 93.25,
+    "final_action_type_accuracy": 95.0,
+    "state_correct_rate": 95.25,
+    "guard_interventions": 0,
+    "episodes_with_invalid_output": 1,
+    "by_category": {
+      "ambiguity": {
+        "success": 91.18,
+        "n": 34
+      },
+      "ambiguity_followup": {
+        "success": 90.62,
+        "n": 32
+      },
+      "chat": {
+        "success": 100.0,
+        "n": 23
+      },
+      "delete": {
+        "success": 64.29,
+        "n": 28
+      },
+      "file": {
+        "success": 100.0,
+        "n": 40
+      },
+      "file_error": {
+        "success": 100.0,
+        "n": 7
+      },
+      "list": {
+        "success": 97.06,
+        "n": 34
+      },
+      "note": {
+        "success": 100.0,
+        "n": 27
+      },
+      "out_of_scope": {
+        "success": 100.0,
+        "n": 15
+      },
+      "scheduling_one_time": {
+        "success": 91.3,
+        "n": 69
+      },
+      "scheduling_recurring": {
+        "success": 96.97,
+        "n": 66
+      },
+      "scheduling_relative": {
+        "success": 92.0,
+        "n": 25
+      }
+    },
+    "answer_correct_rate": 93.39,
+    "answer_checked": 257,
+    "answer_by_category": {
+      "delete": {
+        "correct": 62.5,
+        "n": 16
+      },
+      "file": {
+        "correct": 100.0,
+        "n": 28
+      },
+      "list": {
+        "correct": 97.06,
+        "n": 34
+      },
+      "note": {
+        "correct": 100.0,
+        "n": 27
+      },
+      "scheduling_one_time": {
+        "correct": 90.77,
+        "n": 65
+      },
+      "scheduling_recurring": {
+        "correct": 96.88,
+        "n": 64
+      },
+      "scheduling_relative": {
+        "correct": 91.3,
+        "n": 23
+      }
+    },
+    "failures": [
+      {
+        "episode": "test-9001-21",
+        "user": "Please drop the pay the credit card bill reminder.",
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: pay the credit card bill."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9001-45",
+        "user": "Don't let me forget to inspect the hay bales on November 20.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Reminder set: inspect the hay bales on 2026-11-20 at 20:00."
+        }
+      },
+      {
+        "episode": "test-9001-66",
+        "user": "Don't let me forget to water the vegetable garden tomorrow.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to water the supplier b website."
+        }
+      },
+      {
+        "episode": "test-9001-67",
+        "user": "Don't let me forget to check the pregnancy test results for cow 12 on saturday at 9:30 at night.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: check the pregnancy test results for cow 12 on 2027-06-19 at 21:30."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "What should I remind you about?"
+        }
+      },
+      {
+        "episode": "test-9001-85",
+        "user": "This Saturday 9 in the morning: inspect the hay bales. Please remind me.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: inspect the hay bales on 2027-03-20 at 09:00."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Saved the note."
+        }
+      },
+      {
+        "episode": "test-9001-111",
+        "user": "On Mar 25 noon: sharpen the knives. Please remind me.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: sharpen the knives on 2027-03-25 at 12:00."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Saved the note."
+        }
+      },
+      {
+        "episode": "test-9001-121",
+        "user": "Please drop the call the seed dealer reminder.",
+        "gold": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to call the seed dealer."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9001-127",
+        "user": "Don't let me forget to inspect the hay bales this Monday.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to inspect the hay bales."
+        }
+      },
+      {
+        "episode": "test-9001-130",
+        "user": "Don't let me forget to check the pregnancy test results for cow 12 tomorrow.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Reminder set: check the pregnancy test results for cow 12 on 2026-05-20 at 12:00."
+        }
+      },
+      {
+        "episode": "test-9001-139",
+        "user": "Please drop the check the pregnancy test results for cow 12 reminder.",
+        "gold": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to check the pregnancy test results for cow 12."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9001-144",
+        "user": "Please drop the clean the air filter reminder.",
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: clean the air filter."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9001-145",
+        "user": "Half an hour from now, remind me to check the tyre pressure.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: check the tyre pressure on 2026-10-02 at 21:35."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9001-156",
+        "user": "Don't let me forget to renew the gym membership next Wednesday.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder that matches what you asked, so I didn't delete anything."
+        }
+      },
+      {
+        "episode": "test-9001-166",
+        "user": "Daily at 8:30 am I need to water the vegetable garden. Remind me.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: water the vegetable garden on 2026-02-13 at 08:30, repeating every day."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Reminder set: water the vegetable garden on 2026-02-13 at 08:30."
+        }
+      },
+      {
+        "episode": "test-9001-177",
+        "user": "An hour from now, remind me to send the photos to Priya.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: send the photos to Priya on 2027-06-17 at 11:00."
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to send the photos to Priya."
+        }
+      },
+      {
+        "episode": "test-9001-192",
+        "user": "Please drop the check the pregnancy test results for cow 12 reminder.",
+        "gold": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to check the pregnancy test results for cow 12."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9001-194",
+        "user": "Daily at 6:40 in the evening I need to buy a birthday gift. Remind me.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: buy a birthday gift on 2027-03-28 at 18:40, repeating every day."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Reminder set: buy a birthday gift on 2027-03-28 at 18:40."
+        }
+      },
+      {
+        "episode": "test-9001-200",
+        "user": "Please drop the call the seed dealer reminder.",
+        "gold": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to call the seed dealer."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9001-213",
+        "user": "Tell me my upcoming reminders.",
+        "gold": {
+          "type": "finish",
+          "result": "You have 2 reminders: call my brother on 2027-10-11 at 15:45; check the rainfall gauge on 2027-10-13 at 23:45 (repeats)."
+        },
+        "pred": {
+          "type": "fail",
+          "error": "Sorry, I couldn't work out a valid next step for that request."
+        }
+      },
+      {
+        "episode": "test-9001-247",
+        "user": "Please drop the call the vet about the lame cow reminder.",
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: call the vet about the lame cow."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9001-249",
+        "user": "Ping me at 11:50 AM so I pay the credit card bill.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: pay the credit card bill on 2026-05-20 at 11:50."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Reminder set: pay the credit card bill on 2026-05-25 at 11:50."
+        }
+      },
+      {
+        "episode": "test-9001-255",
+        "user": "On the 18th of July 6 am: feed the dogs. Please remind me.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: feed the dogs on 2027-07-18 at 06:00."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Saved the note."
+        }
+      },
+      {
+        "episode": "test-9001-360",
+        "user": "Don't let me forget to clean the solar panels on Feb 29.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Reminder set: clean the solar panels on 2028-01-02 at 20:00."
+        }
+      },
+      {
+        "episode": "test-9001-366",
+        "user": "I no longer need the reminder to check the pregnancy test results for cow 12. Delete it.",
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: check the pregnancy test results for cow 12."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Reminder set: check the pregnancy test results for cow 12 on 2027-08-04 at 12:00."
+        }
+      },
+      {
+        "episode": "test-9001-373",
+        "user": "Don't let me forget to defrost the freezer on 4 May at 6 am.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: defrost the freezer on 2027-05-04 at 06:00."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "What should I remind you about?"
+        }
+      }
+    ]
+  },
+  "conversations": {
+    "episodes": 400,
+    "conversation_success_rate": 88.25,
+    "by_category": {
+      "ambiguity": {
+        "success": 85.37,
+        "n": 41
+      },
+      "ambiguity_followup": {
+        "success": 82.98,
+        "n": 47
+      },
+      "chat": {
+        "success": 90.62,
+        "n": 32
+      },
+      "delete": {
+        "success": 53.66,
+        "n": 41
+      },
+      "file": {
+        "success": 92.31,
+        "n": 52
+      },
+      "file_error": {
+        "success": 90.0,
+        "n": 10
+      },
+      "list": {
+        "success": 89.13,
+        "n": 46
+      },
+      "note": {
+        "success": 100.0,
+        "n": 34
+      },
+      "out_of_scope": {
+        "success": 90.91,
+        "n": 22
+      },
+      "scheduling_one_time": {
+        "success": 83.84,
+        "n": 99
+      },
+      "scheduling_recurring": {
+        "success": 88.51,
+        "n": 87
+      },
+      "scheduling_relative": {
+        "success": 84.85,
+        "n": 33
+      }
+    },
+    "failures": [
+      {
+        "episode": "test-9001-15",
+        "category": "file+ambiguity+scheduling_recurring",
+        "why": "after 'Every weekend at 5:40 in the morning I need to check the pre': got {'type': 'ask_user', 'question': 'What time should I remind you?'}"
+      },
+      {
+        "episode": "test-9001-21",
+        "category": "delete",
+        "why": "after 'Please drop the pay the credit card bill reminder.': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      },
+      {
+        "episode": "test-9001-31",
+        "category": "scheduling_recurring+scheduling_one_time",
+        "why": "after 'Tomorrow 11 am: sharpen the knives. Please remind me.': got {'type': 'finish', 'result': 'Saved the note.'}"
+      },
+      {
+        "episode": "test-9001-45",
+        "category": "ambiguity_followup",
+        "why": "after 'Don't let me forget to inspect the hay bales on November 20.': got {'type': 'finish', 'result': 'Reminder set: inspect the hay bales on 2026-11-20 at 20:00.'}"
+      },
+      {
+        "episode": "test-9001-65",
+        "category": "ambiguity_followup",
+        "why": "after 'to check the pregnancy test results for cow 12': got {'type': 'ask_user', 'question': 'What time should I remind you?'}"
+      },
+      {
+        "episode": "test-9001-66",
+        "category": "ambiguity+file",
+        "why": "after 'Don't let me forget to water the vegetable garden tomorrow.': got {'type': 'fail', 'error': \"I couldn't find a reminder to water the supplier b website.\"}"
+      },
+      {
+        "episode": "test-9001-67",
+        "category": "scheduling_one_time",
+        "why": "after 'Don't let me forget to check the pregnancy test results for ': got {'type': 'ask_user', 'question': 'What should I remind you about?'}"
+      },
+      {
+        "episode": "test-9001-79",
+        "category": "ambiguity_followup+scheduling_one_time",
+        "why": "after 'On Saturday 9:15am: renew the gym membership. Please remind ': got {'type': 'finish', 'result': 'Saved the note.'}"
+      },
+      {
+        "episode": "test-9001-84",
+        "category": "ambiguity+scheduling_recurring",
+        "why": "after 'Could you remind me on the 15th of every month at 10:00 to p': got {'type': 'finish', 'result': 'Reminder set: pay the school fees on 2026-11-15 at 22:00, repeating on the 15th of every month.'}"
+      },
+      {
+        "episode": "test-9001-85",
+        "category": "scheduling_one_time",
+        "why": "after 'This Saturday 9 in the morning: inspect the hay bales. Pleas': got {'type': 'finish', 'result': 'Saved the note.'}"
+      },
+      {
+        "episode": "test-9001-111",
+        "category": "scheduling_one_time",
+        "why": "after 'On Mar 25 noon: sharpen the knives. Please remind me.': got {'type': 'finish', 'result': 'Saved the note.'}"
+      },
+      {
+        "episode": "test-9001-121",
+        "category": "delete",
+        "why": "after 'Please drop the call the seed dealer reminder.': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      },
+      {
+        "episode": "test-9001-127",
+        "category": "ambiguity+scheduling_recurring",
+        "why": "after 'Don't let me forget to inspect the hay bales this Monday.': got {'type': 'fail', 'error': \"I couldn't find a reminder to inspect the hay bales.\"}"
+      },
+      {
+        "episode": "test-9001-128",
+        "category": "scheduling_recurring+scheduling_relative",
+        "why": "after 'Half an hour from now, remind me to check the rainfall gauge': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      },
+      {
+        "episode": "test-9001-130",
+        "category": "ambiguity_followup+out_of_scope",
+        "why": "after 'Don't let me forget to check the pregnancy test results for ': got {'type': 'finish', 'result': 'Reminder set: check the pregnancy test results for cow 12 on 2026-05-20 at 12:00.'}"
+      },
+      {
+        "episode": "test-9001-139",
+        "category": "delete",
+        "why": "after 'Please drop the check the pregnancy test results for cow 12 ': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      },
+      {
+        "episode": "test-9001-141",
+        "category": "scheduling_recurring+scheduling_one_time",
+        "why": "after 'Next Tuesday 6am: inspect the hay bales. Please remind me.': got {'type': 'finish', 'result': 'Saved the note.'}"
+      },
+      {
+        "episode": "test-9001-144",
+        "category": "delete",
+        "why": "after 'Please drop the clean the air filter reminder.': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      },
+      {
+        "episode": "test-9001-145",
+        "category": "scheduling_relative",
+        "why": "after 'Half an hour from now, remind me to check the tyre pressure.': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      },
+      {
+        "episode": "test-9001-155",
+        "category": "file+delete+list",
+        "why": "after 'Which reminders are set?': got {'type': 'finish', 'result': 'You have 5 files: deliveries.csv, notes.txt, payments.csv, suppliers.csv, vet_visits.txt.'}"
+      },
+      {
+        "episode": "test-9001-156",
+        "category": "ambiguity+scheduling_one_time+scheduling_recurring",
+        "why": "after 'Don't let me forget to renew the gym membership next Wednesd': got {'type': 'fail', 'error': \"I couldn't find a reminder that matches what you asked, so I didn't delete anything.\"}"
+      },
+      {
+        "episode": "test-9001-166",
+        "category": "scheduling_recurring+list",
+        "why": "after 'Daily at 8:30 am I need to water the vegetable garden. Remin': got {'type': 'finish', 'result': 'Reminder set: water the vegetable garden on 2026-02-13 at 08:30.'}"
+      },
+      {
+        "episode": "test-9001-177",
+        "category": "scheduling_relative+delete+scheduling_relative",
+        "why": "after 'An hour from now, remind me to send the photos to Priya.': got {'type': 'fail', 'error': \"I couldn't find a reminder to send the photos to Priya.\"}"
+      },
+      {
+        "episode": "test-9001-191",
+        "category": "chat+delete+scheduling_one_time",
+        "why": "after 'I no longer need the reminder to check the pregnancy test re': got {'type': 'finish', 'result': 'Reminder set: check the pregnancy test results for cow 12 on 2027-05-30 at 12:00.'}"
+      },
+      {
+        "episode": "test-9001-192",
+        "category": "delete",
+        "why": "after 'Please drop the check the pregnancy test results for cow 12 ': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      }
+    ]
+  },
+  "seconds": 1860.3
+}

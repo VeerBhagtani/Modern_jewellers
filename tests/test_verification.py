@@ -94,7 +94,7 @@ def test_grounding_issue_rules():
     two = [{"type": "user", "content": "Remind me tomorrow at 8 to call the vet."}]
     assert grounding_issue(_create("call the vet"), two) is None
     assert grounding_issue(_create("call"), two) is not None
-    assert grounding_issue(_create("pay rent"), [{"type": "user", "content": "remind me to pay rent every Monday at 9"}]) is None
+    assert grounding_issue(_create("pay rent"), [{"type": "user", "content": "remind me to pay rent every Monday at 8"}]) is None
     assert grounding_issue(_create("pay rent"), evs) is not None
     assert grounding_issue(Action.tool_call("notes.create", {"text": "renew the gym membership"}), evs) is None
     assert grounding_issue(Action.tool_call("notes.create", {"text": "the gym"}), evs) is not None
@@ -356,3 +356,53 @@ def test_not_found_claims_must_agree_with_the_tools():
     other = [{"type": "user", "content": "Delete my reminder to order spare pump parts."}] + _listed("check sales")
     assert answer_issue(Action.fail("I couldn't find a reminder to order spare pump parts."), other) is None
     assert answer_issue(Action.fail("I couldn't find a reminder to order the pump."), other) is not None  # not the user's words
+
+
+def test_amounts_rates_and_times_come_from_the_users_words():
+    from arouse.agent.mentions import gst_mentions, mentioned_times
+
+    assert mentioned_times(["On June 15 6:40pm: buy a gift"]) == {"18:40"}
+    assert mentioned_times(["at 9:30 at night", "7 in the evening", "noon"]) == {"21:30", "19:00", "12:00"}
+    assert mentioned_times(["at 7"]) == {"07:00", "19:00"} and mentioned_times(["in 3 hours"]) == set()
+    ask = {"type": "arouse", "turn": {"action": {"type": "ask_user", "question": "Which GST rate should I use? For example 3% for gold, 5% or 18%."}}}
+    assert gst_mentions([{"type": "user", "content": "My bill is 26 lakh and GST is 18%."}]) == ({"26 lakh"}, {"18"})
+    assert gst_mentions([{"type": "user", "content": "How much GST on 1180?"}, ask, {"type": "user", "content": "18"}]) == ({"1180"}, {"18"})
+    swapped = Action.tool_call("gst.calculate", {"amount": "18", "rate": "26"})
+    assert grounding_issue(swapped, [{"type": "user", "content": "My bill is 26 lakh and GST is 18%."}]) is not None
+    wrong_time = _create("buy a gift")  # 08:00
+    assert grounding_issue(wrong_time, [{"type": "user", "content": "Remind me tomorrow at 6:40pm to buy a gift."}]) is not None
+
+
+def test_which_file_question_is_written_from_the_tool_results():
+    from arouse.agent.answers import corrected_question
+
+    evs = [{"type": "user", "content": "Count the lines in vet_visits.txt."},
+           {"type": "arouse", "turn": {"action": {"type": "tool_call", "tool": "file.read", "arguments": {"path": "vet_visits.txt"}}}},
+           {"type": "tool_error", "content": {"success": False, "error": "file not found: vet_visits.txt", "retryable": False}},
+           {"type": "arouse", "turn": {"action": {"type": "tool_call", "tool": "file.list", "arguments": {}}}},
+           {"type": "tool_result", "content": {"success": True, "files": ["sales.csv", "vet_visits_2026.txt"]}}]
+    garbled = Action.ask_user("I couldn't find milk_2020.csv. Which file should I use? Available: feedies.csv.")
+    assert corrected_question(garbled, evs) == "I couldn't find vet_visits.txt. Did you mean vet_visits_2026.txt?"
+    assert corrected_question(Action.ask_user("I couldn't find vet_visits.txt. Did you mean vet_visits_2026.txt?"), evs) is None
+
+
+def test_paths_are_whole_file_names(tiny_tokenizer):
+    evs = [{"type": "user", "content": "Can you look at payments.csv?"}]
+    cc = CopyConstraint(tiny_tokenizer, evs, build_context(NOW))
+    assert cc.complete("path", "payments.csv") and not cc.complete("path", "payments.c") and not cc.complete("path", "payments.")
+    assert grounding_issue(Action.tool_call("file.read", {"path": "payments.c"}), evs) is not None
+    assert grounding_issue(Action.tool_call("file.read", {"path": "payments.csv"}), evs) is None
+
+
+def test_repeating_a_call_that_failed_for_good_is_not_grounded():
+    call = Action.tool_call("scheduler.create", {"task": "water the plants", "date": "2026-09-30", "time": "07:00"})
+    evs = [{"type": "user", "content": "Remind me today at 7 AM to water the plants."},
+           {"type": "arouse", "turn": {"action": call.to_dict()}},
+           {"type": "tool_error", "content": {"success": False, "error": "that time has already passed", "retryable": False}},
+           {"type": "arouse", "turn": {"action": {"type": "ask_user", "question": "07:00 today has already passed. Should I set it for tomorrow at 07:00 instead?"}}},
+           {"type": "user", "content": "yes"}]
+    assert "already failed" in grounding_issue(call, evs)
+    tomorrow = Action.tool_call("scheduler.create", {"task": "water the plants", "date": "2026-10-01", "time": "07:00"})
+    assert grounding_issue(tomorrow, evs) is None
+    retryable = evs[:2] + [{"type": "tool_error", "content": {"success": False, "error": "scheduler unavailable", "retryable": True}}]
+    assert grounding_issue(call, retryable) is None  # one retry after a transient failure is fine

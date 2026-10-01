@@ -5,7 +5,7 @@ Rule: every file used for training must be listed in a `MANIFEST.json`, with its
 | Dataset | Purpose | Origin |
 |---|---|---|
 | `tokenizer_tiny/` | Tokenizer development and tests only | Hand-written for Arouse, plus synthetic data from `scripts/build_tiny_tokenizer_corpus.py --seed 1234` (byte-reproducible) |
-| `agent_v1/`, `agent_v2/`, `agent_v3/` | Agent SFT data for `arouse-agent-s` plus AgentBench v1:<br>• v1 and v2: 80k episodes each, about 30M tokens. v2 adds the plain-text calendar and explicit date lookup<br>• v3: 100k episodes. Adds train-only phrasing variety for the measured weak spots: notes, deletes, one-time dates, out-of-scope questions, small talk, polite prefixes and suffixes. The held-out test split is unchanged, byte for byte | Synthetic, from `arouse/agent/synth.py` via `scripts/build_agent_data.py`. The large training file is regenerated on demand (reproducible by seed); `MANIFEST.json` records its SHA-256 |
+| `agent_v1/` … `agent_v4/` | Agent SFT data for `arouse-agent-s` plus AgentBench v1:<br>• v1 and v2: 80k episodes each, about 30M tokens. v2 adds the plain-text calendar and explicit date lookup<br>• v3: 100k episodes. Adds train-only phrasing variety for the measured weak spots: notes, deletes, one-time dates, out-of-scope questions, small talk, polite prefixes and suffixes. The held-out test split is unchanged, byte for byte<br>• v4: 120k episodes. Adds questions answered from `arouse/agent/knowledge.json` (hand-written, sources listed in the file), GST calculations and finding leads in a synthetic `customers.csv`. Comes with AgentBench v2 | Synthetic, from `arouse/agent/synth.py` via `scripts/build_agent_data.py`. The large training file is regenerated on demand (reproducible by seed); `MANIFEST.json` records its SHA-256 |
 
 `tokenizer_tiny` contents:
 - `general.txt`, `code.txt`, `structured.txt`, `multilingual.txt`: original hand-written text
@@ -15,5 +15,5 @@ Rule: every file used for training must be listed in a `MANIFEST.json`, with its
 Regenerate the agent data:
 
 ```bash
-python scripts/build_agent_data.py --name agent_v3   # -> artifacts/datasets/agent_v3/train.jsonl (add --bench to rewrite the benchmark files)
+python scripts/build_agent_data.py --name agent_v4   # -> artifacts/datasets/agent_v4/train.jsonl (add --bench to rewrite benchmarks/agentbench_v2)
 ```

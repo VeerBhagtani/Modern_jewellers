@@ -1,6 +1,6 @@
 name: arouse-agent-s
 vocab_size: 4096
-context_length: 768
+context_length: 1024
 d_model: 256
 n_layers: 6
 n_heads: 8

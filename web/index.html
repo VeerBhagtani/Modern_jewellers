@@ -169,26 +169,27 @@
       <div class="scroll" id="scroll">
         <div class="log" id="log">
           <div class="intro" id="intro">
-            <h1>Reminders, notes and files, handled by a model running on this page.</h1>
+            <h1>Reminders, GST, leads and business questions, handled by a model running on this page.</h1>
             <p>Arouse is a small language model trained from scratch for one job: turning what you ask into tool calls, then checking the result. It runs in your browser, so nothing you type leaves this device.</p>
             <div class="load" id="load"><div class="meter"><i id="meter"></i></div><span id="load-text">Downloading model weights</span></div>
             <div class="chips" id="chips">
+              <button type="button">Find me leads</button>
+              <button type="button">What is the GST on gold?</button>
+              <button type="button">Calculate GST on 2.5 lakh at 3%.</button>
               <button type="button">Remind me tomorrow at 8 AM to check sales.</button>
               <button type="button">Every Monday at 9 AM remind me to pay the staff.</button>
-              <button type="button">Remind me in 20 minutes to call the vet.</button>
-              <button type="button">Remind me on Friday to order feed.</button>
-              <button type="button">What reminders do I have?</button>
+              <button type="button">What is HUID?</button>
               <button type="button">Note that the feed delivery is late.</button>
-              <button type="button">How many lines are in sales.csv?</button>
+              <button type="button">What reminders do I have?</button>
             </div>
-            <p class="scope">It handles one-time, relative and repeating reminders, cancelling them, notes, and reading the files in your workspace. It does not answer general questions, and it can misread unusual phrasing.</p>
+            <p class="scope">It sets and cancels reminders, saves notes, reads your files, calculates GST, finds leads in your customer list, and answers questions from its built-in knowledge base (GST, gold and jewellery, dairy, small business; GST rates as of 22 September 2025). Anything else gets an honest "I don't know that yet". It can misread unusual phrasing.</p>
           </div>
         </div>
       </div>
       <div class="composer">
         <form id="composer">
           <label for="input" hidden>Message</label>
-          <textarea id="input" rows="1" placeholder="Ask Arouse to set a reminder, save a note or read a file" autocomplete="off"></textarea>
+          <textarea id="input" rows="1" placeholder="Ask about GST, find leads, or set a reminder" autocomplete="off"></textarea>
           <button class="send" id="send" type="submit" disabled>Send</button>
         </form>
         <p class="fine">Runs on your device. Reminders fire while this page is open.</p>
@@ -223,23 +224,46 @@
   const $ = (id) => document.getElementById(id);
   const KEY = "arouse.web.v1";
   const BELL = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.4A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.6L18 12.6V9a6 6 0 0 0-6-6Zm-2.4 15.5a2.5 2.5 0 0 0 4.8 0h-4.8Z" fill="currentColor"/></svg>';
+  const pad = (n) => String(n).padStart(2, "0");
   const SAMPLE_FILES = {
     "sales.csv": "date,item,qty,amount\n2026-09-28,milk 1L,140,7700\n2026-09-28,curd 500g,36,1440\n2026-09-29,milk 1L,152,8360\n2026-09-29,paneer 200g,18,1620\n2026-09-30,milk 1L,147,8085\n2026-09-30,ghee 500g,6,2700\n",
     "milk_records.csv": "date,cow,litres\n2026-09-29,Gauri,11.5\n2026-09-29,Kamdhenu,9.0\n2026-09-29,Lakshmi,10.2\n2026-09-30,Gauri,12.0\n2026-09-30,Kamdhenu,8.5\n",
     "staff.csv": "name,role,shift\nRavi,milker,morning\nSunita,delivery,morning\nArjun,accounts,day\n",
   };
+  // a sample customer list with dates relative to today, so every lead-finding method has something to find
+  function sampleCustomers() {
+    const t = new Date(), at = (n) => { const x = new Date(t.getFullYear(), t.getMonth(), t.getDate() + n); return x; };
+    const iso = (x) => `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
+    const md = (n, year) => { const x = at(n); return `${year}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; };
+    const rows = [["Asha Mehta", "Pune", "gold necklace", iso(at(-140)), 120000, md(12, 1988), ""],
+      ["Ravi Shah", "Surat", "diamond ring", iso(at(-20)), 45000, "", md(5, 2012)],
+      ["Neha Rao", "Pune", "silver anklet", iso(at(-300)), 8000, md(150, 1995), ""],
+      ["Kavya Iyer", "Jaipur", "gold bangles", iso(at(-95)), 76500, md(200, 1991), md(25, 2015)],
+      ["Arjun Patel", "Mumbai", "gold coins", iso(at(-10)), 210000, md(80, 1979), ""],
+      ["Sunita Nair", "Pune", "mangalsutra", iso(at(-200)), 54000, "", md(260, 2004)],
+      ["Farhan Khan", "Delhi", "wedding rings", iso(at(-45)), 98000, md(3, 1993), ""],
+      ["Meera Joshi", "Nashik", "earrings", iso(at(-400)), 15500, md(330, 1999), ""]];
+    return "name,city,interest,last_purchase,total_spent,birthday,anniversary\n" + rows.map((r) => r.join(",")).join("\n") + "\n";
+  }
+  SAMPLE_FILES["customers.csv"] = sampleCustomers();
   const SAMPLE_NAMES = new Set(Object.keys(SAMPLE_FILES));
   const MAX_FILE = 200 * 1024;
   const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const DAYS = { MO: "Mon", TU: "Tue", WE: "Wed", TH: "Thu", FR: "Fri", SA: "Sat", SU: "Sun" };
-  const pad = (n) => String(n).padStart(2, "0");
 
-  const fresh = () => ({ feed: [], events: [], state: { reminders: [], notes: [], files: { ...SAMPLE_FILES }, nextId: 1, nextNote: 1 } });
+  const fresh = () => ({ feed: [], events: [], customersSample: true,
+    state: { reminders: [], notes: [], files: { ...SAMPLE_FILES }, nextId: 1, nextNote: 1 } });
   let data = (() => {
     try {
       const s = JSON.parse(localStorage.getItem(KEY));
-      if (s && s.state && Array.isArray(s.feed) && Array.isArray(s.events)) return s;
+      if (s && s.state && Array.isArray(s.feed) && Array.isArray(s.events)) {
+        if (!s.customersSample) { // workspaces saved before lead finding existed get the sample customer list once
+          s.customersSample = true;
+          if (!("customers.csv" in s.state.files)) s.state.files["customers.csv"] = SAMPLE_FILES["customers.csv"];
+        }
+        return s;
+      }
     } catch (e) { /* storage unavailable */ }
     return fresh();
   })();
@@ -278,6 +302,9 @@
   function resultText(ev) {
     const c = ev.content || {};
     if (ev.type === "tool_error") return c.error || "failed";
+    if ("found" in c) return c.found ? `Found: "${c.question}"` : "Not in the knowledge base";
+    if ("taxable_value" in c) return `GST ₹${c.gst}, total ₹${c.total}`;
+    if ("method" in c && "leads" in c) return `${c.count} lead${c.count === 1 ? "" : "s"} (${c.method})`;
     if ("next_run" in c) return `Created ${c.task_id}, next run ${whenText(c.next_run)}`;
     if ("count" in c) return `${c.count} reminder${c.count === 1 ? "" : "s"}`;
     if ("deleted" in c) return `Deleted ${c.deleted} (${c.task})`;

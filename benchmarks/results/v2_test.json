@@ -1,0 +1,2392 @@
+{
+  "benchmark": "arouse-agentbench-v1",
+  "file": "benchmarks/agentbench_v2/test.jsonl",
+  "model": {
+    "name": "arouse-agent-s",
+    "num_parameters": 5475584,
+    "context_length": 1024,
+    "vocab_size": 4096,
+    "tokenizer_fingerprint": "6b6a9b5f8ac402c8",
+    "trained": true,
+    "train_steps": 4000,
+    "device": "cpu"
+  },
+  "decisions": {
+    "mode": "raw",
+    "decisions": 1416,
+    "decision_accuracy": 68.29,
+    "structured_output_validity": 93.5,
+    "action_type_accuracy": 89.97,
+    "tool_selection_accuracy": 86.97,
+    "argument_exact_accuracy": 43.01,
+    "scheduling_exact_accuracy": 28.57,
+    "ask_rate_on_ambiguous": 83.7,
+    "false_completion_rate": 0.0,
+    "response_text_exact": 70.42,
+    "counts": {
+      "decisions": 1416,
+      "valid": 1324,
+      "type_ok": 1274,
+      "correct": 967,
+      "gold_tool_calls": 637,
+      "tool_ok": 554,
+      "args_ok": 274,
+      "text_cmp": 693,
+      "text_exact": 488,
+      "sched": 224,
+      "sched_ok": 64,
+      "after_error": 66,
+      "false_completion": 0,
+      "ambiguous": 135,
+      "asked": 113
+    },
+    "by_skill": {
+      "intent": {
+        "accuracy": 61.25,
+        "n": 893
+      },
+      "tool_selection": {
+        "accuracy": 43.11,
+        "n": 566
+      },
+      "argument_generation": {
+        "accuracy": 35.3,
+        "n": 541
+      },
+      "scheduling": {
+        "accuracy": 28.12,
+        "n": 192
+      },
+      "multi_step": {
+        "accuracy": 74.39,
+        "n": 82
+      },
+      "task_state": {
+        "accuracy": 46.21,
+        "n": 145
+      },
+      "error_recovery": {
+        "accuracy": 77.36,
+        "n": 106
+      },
+      "ambiguity": {
+        "accuracy": 83.7,
+        "n": 135
+      },
+      "completion_verification": {
+        "accuracy": 89.57,
+        "n": 537
+      },
+      "structured_output": {
+        "accuracy": 68.29,
+        "n": 1416
+      }
+    },
+    "by_category": {
+      "ambiguity": {
+        "accuracy": 85.39,
+        "n": 89
+      },
+      "ambiguity_followup": {
+        "accuracy": 64.62,
+        "n": 130
+      },
+      "chat": {
+        "accuracy": 87.93,
+        "n": 58
+      },
+      "delete": {
+        "accuracy": 68.31,
+        "n": 183
+      },
+      "file": {
+        "accuracy": 75.0,
+        "n": 144
+      },
+      "file_error": {
+        "accuracy": 85.71,
+        "n": 63
+      },
+      "gst": {
+        "accuracy": 69.14,
+        "n": 175
+      },
+      "gst_followup": {
+        "accuracy": 67.86,
+        "n": 28
+      },
+      "leads_ask": {
+        "accuracy": 58.33,
+        "n": 12
+      },
+      "leads_custom": {
+        "accuracy": 50.88,
+        "n": 57
+      },
+      "leads_direct": {
+        "accuracy": 64.79,
+        "n": 71
+      },
+      "leads_own_idea": {
+        "accuracy": 63.04,
+        "n": 46
+      },
+      "leads_pick": {
+        "accuracy": 72.64,
+        "n": 106
+      },
+      "list": {
+        "accuracy": 85.11,
+        "n": 94
+      },
+      "note": {
+        "accuracy": 53.93,
+        "n": 89
+      },
+      "out_of_scope": {
+        "accuracy": 64.15,
+        "n": 53
+      },
+      "question": {
+        "accuracy": 71.22,
+        "n": 205
+      },
+      "question_unknown": {
+        "accuracy": 56.57,
+        "n": 99
+      },
+      "scheduling_one_time": {
+        "accuracy": 55.48,
+        "n": 301
+      },
+      "scheduling_recurring": {
+        "accuracy": 65.03,
+        "n": 183
+      },
+      "scheduling_relative": {
+        "accuracy": 56.38,
+        "n": 94
+      }
+    },
+    "failures": [
+      {
+        "episode": "test-9002-0",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "finish",
+          "result": "I'm Arouse, a task assistant. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads."
+        },
+        "raw": "<|finish|>{\"result\":\"I'm Arouse, a task assistant. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads.\"}"
+      },
+      {
+        "episode": "test-9002-1",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "feed the dogs",
+            "time": "17:05",
+            "repeat": {
+              "freq": "daily"
+            }
+          }
+        },
+        "pred": null,
+        "raw": "<|plan|>Recurring reminder every day at 17:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"freq\":\"daily\"},\"task\":\"feed the on 2026-04-12 at 17:05 (task\":\"feed the\":\"scheduler.create succeeded (task\":\"feed the<|verify|>scheduler.create succeeded (task\":\"feed the-2).<|finish|>{\"resu"
+      },
+      {
+        "episode": "test-9002-1",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "feed the dogs",
+            "time": "17:05",
+            "repeat": {
+              "freq": "daily"
+            }
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "repeat": {
+              "freq": "daily"
+            },
+            "task": "feed thep",
+            "time": "17:05"
+          }
+        },
+        "raw": "<|verify|>The scheduler failed with a retryable error; retry once.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"freq\":\"daily\"},\"task\":\"feed thep\",\"time\":\"17:05\"}}"
+      },
+      {
+        "episode": "test-9002-4",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "how many players are in a cricket team"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "how many"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"how many\"}}"
+      },
+      {
+        "episode": "test-9002-6",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9002-8",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "buy a birthday gift",
+            "in_minutes": 30
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9002-8",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "buy a birthday gift",
+            "in_minutes": 30
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "in_minutes": 30,
+            "task": "buy a birth"
+          }
+        },
+        "raw": "<|verify|>The scheduler failed with a retryable error; retry once.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"in_minutes\":30,\"task\":\"buy a birth\"}}"
+      },
+      {
+        "episode": "test-9002-8",
+        "turn": 5,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "defrost the freezer",
+            "time": "19:20",
+            "repeat": {
+              "freq": "daily"
+            }
+          }
+        },
+        "pred": null,
+        "raw": "<|plan|>Recurring reminder every day at 19:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"freq\":\"daily\"},\"task\":\"defrost the free oiler free oiler free oiler free oiler free oiler free oiler free oiler free oiler free oiler free oiler free oiler free oiler free oiler free oiler f"
+      },
+      {
+        "episode": "test-9002-8",
+        "turn": 6,
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: defrost the freezer on 2026-12-14 at 19:20, repeating every day."
+        },
+        "pred": null,
+        "raw": "<|verify|>scheduler.create succeeded (task_id r-3).<|finish|>{\"result\":\"Reminder set: defrost the free oiler free oiler free oiler free goer free goer free goer free goer free goer free goer free goer free goer free goer free goer free goer free goer free goer free goer free goer free goer free goer"
+      },
+      {
+        "episode": "test-9002-9",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the roof leaks in the calf shed"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the roof leads"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"the roof leads\"}}"
+      },
+      {
+        "episode": "test-9002-10",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "I was wondering, above what value do I need an e-way bill"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "I was wondering \u00d7 an e-way bill"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"I was wondering \u00d7 an e-way bill\"}}"
+      },
+      {
+        "episode": "test-9002-10",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "I was wondering, do I need to issue e-invoices"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "I was wondering, do I set to issue e-invoices"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"I was wondering, do I set to issue e-invoices\"}}"
+      },
+      {
+        "episode": "test-9002-11",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "pred": null,
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Who0 I sell to\",\"qu\"}}"
+      },
+      {
+        "episode": "test-9002-14",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "test the backup generator",
+            "date": "2027-11-15",
+            "time": "16:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-11-15",
+            "task": "test the laptop",
+            "time": "16:00"
+          }
+        },
+        "raw": "<|plan|>Today is 2027-11-15. One-time reminder on 2027-11-15 at 16:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-11-15\",\"task\":\"test the laptop\",\"time\":\"16:00\"}}"
+      },
+      {
+        "episode": "test-9002-17",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the pregnancy test results for cow 12",
+            "date": "2027-04-26",
+            "time": "15:30"
+          }
+        },
+        "pred": null,
+        "raw": "<|plan|>Tomorrow is 2027-04-26. One-time reminder on 2027-04-26 at 15:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-04-26\",\"task\":\"check the pre74-04-26\",\"task_id r-0).<|finish|>{\"result\":\"Reminder set:30).<|finish|>{\"result\":\"Reminder set:30 today has task_id r-06-26 at 15:30"
+      },
+      {
+        "episode": "test-9002-17",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "Look up temple jewellery buyers in Thane"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Look up in Indineers in Inda in Ga"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Look up in Indineers in Inda in Ga\"}}"
+      },
+      {
+        "episode": "test-9002-19",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the rainfall gauge",
+            "date": "2027-01-15",
+            "time": "17:30"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-01-11",
+            "task": "check the rain gutterl gauge",
+            "time": "17:30"
+          }
+        },
+        "raw": "<|plan|>Friday is 2027-01-11. One-time reminder on 2027-01-11 at 17:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-01-11\",\"task\":\"check the rain gutterl gauge\",\"time\":\"17:30\"}}"
+      },
+      {
+        "episode": "test-9002-19",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "check the rainfall gauge",
+            "date": "2027-01-15",
+            "time": "17:30"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-01-15",
+            "task": "check the rain gutterl gauge",
+            "time": "17:30"
+          }
+        },
+        "raw": "<|verify|>The scheduler failed with a retryable error; retry once.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-01-15\",\"task\":\"check the rain gutterl gauge\",\"time\":\"17:30\"}}"
+      },
+      {
+        "episode": "test-9002-20",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9002-21",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "gst.calculate",
+          "arguments": {
+            "amount": "26 lakh",
+            "rate": "18"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "gst.calculate",
+          "arguments": {
+            "amount": "18",
+            "rate": "18"
+          }
+        },
+        "raw": "<|plan|>Calculate GST with the tool.<|tool_call|>{\"tool\":\"gst.calculate\",\"arguments\":{\"amount\":\"18\",\"rate\":\"18\"}}"
+      },
+      {
+        "episode": "test-9002-22",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "raw": "<|plan|>Finding leads can be done in several ways: offer three and ask, or use the user's idea.<|ask_user|>{\"question\":\"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for ref"
+      },
+      {
+        "episode": "test-9002-23",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the hay supplier raised prices"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the hay supplier needs repairaised prices"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"the hay supplier needs repairaised prices\"}}"
+      },
+      {
+        "episode": "test-9002-24",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "feed the dogs",
+            "time": "13:05",
+            "repeat": {
+              "freq": "daily"
+            }
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "repeat": {
+              "freq": "daily"
+            },
+            "task": "feed thep",
+            "time": "13:05"
+          }
+        },
+        "raw": "<|plan|>Recurring reminder every day at 13:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"freq\":\"daily\"},\"task\":\"feed thep\",\"time\":\"13:05\"}}"
+      },
+      {
+        "episode": "test-9002-24",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "feed the dogs",
+            "time": "13:05",
+            "repeat": {
+              "freq": "daily"
+            }
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "repeat": {
+              "freq": "daily"
+            },
+            "task": "feed thep",
+            "time": "13:05"
+          }
+        },
+        "raw": "<|verify|>The scheduler failed with a retryable error; retry once.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"freq\":\"daily\"},\"task\":\"feed thep\",\"time\":\"13:05\"}}"
+      },
+      {
+        "episode": "test-9002-24",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the roof leaks in the calf shed"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the roof leads"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"the roof leads\"}}"
+      },
+      {
+        "episode": "test-9002-25",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "Look up platinum band buyers in Ludhiana"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "Look up in Lud customers"
+          }
+        },
+        "raw": "<|plan|>Find leads with the custom method.<|tool_call|>{\"tool\":\"leads.find\",\"arguments\":{\"method\":\"custom\",\"query\":\"Look up in Lud customers\"}}"
+      },
+      {
+        "episode": "test-9002-25",
+        "turn": 1,
+        "gold": {
+          "type": "finish",
+          "result": "I didn't find any customers matching \"Look up platinum band buyers in Ludhiana\" in customers.csv."
+        },
+        "pred": null,
+        "raw": "<|verify|>leads.find returned 0.<|finish|>{\"result\":\"I didn't find any customers matching \\\"Look up\"}}"
+      },
+      {
+        "episode": "test-9002-26",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-2"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-1"
+          }
+        },
+        "raw": "<|verify|>'drop the'call myactive' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
+      },
+      {
+        "episode": "test-9002-26",
+        "turn": 2,
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: call my brother."
+        },
+        "pred": null,
+        "raw": "<|verify|>scheduler.delete succeeded for r-2.<|finish|>{\"result\":\"Deleted the reminder: call my"
+      },
+      {
+        "episode": "test-9002-27",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the market is closed on Sunday"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the market is cloul on Sunday"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"the market is cloul on Sunday\"}}"
+      },
+      {
+        "episode": "test-9002-30",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-2"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-1"
+          }
+        },
+        "raw": "<|verify|>'check the rain gutterl gauge' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
+      },
+      {
+        "episode": "test-9002-32",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "raw": "<|plan|>Finding leads can be done in several ways: offer three and ask, or use the user's idea.<|ask_user|>{\"question\":\"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for ref"
+      },
+      {
+        "episode": "test-9002-32",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "feed the dogs",
+            "date": "2026-04-24",
+            "time": "05:20"
+          }
+        },
+        "pred": null,
+        "raw": "<|plan|>April 24 is 2026-04-24. One-time reminder on 2026-04-24 at 05:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-04-24\",\"task\":\"feed theM'.<|fail|>{\"error\":\"I couldn't find a reminder to find a reminder to feed the re\"}}"
+      },
+      {
+        "episode": "test-9002-32",
+        "turn": 3,
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: feed the dogs on 2026-04-24 at 05:20."
+        },
+        "pred": null,
+        "raw": "<|verify|>scheduler.create succeeded (task_id r-3).<|finish|>{\"result\":\"Reminder set: feed the\"]"
+      },
+      {
+        "episode": "test-9002-33",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "water the vegetable garden",
+            "date": "2026-05-06",
+            "time": "05:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-05-05",
+            "task": "water theponge75",
+            "time": "05:00"
+          }
+        },
+        "raw": "<|plan|>Wednesday is 2026-05-05. One-time reminder on 2026-05-05 at 05:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-05-05\",\"task\":\"water theponge75\",\"time\":\"05:00\"}}"
+      },
+      {
+        "episode": "test-9002-34",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "update the loan papers",
+            "date": "2026-01-26",
+            "time": "10:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "the loan papers"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"the loan papers\"}}"
+      },
+      {
+        "episode": "test-9002-36",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "call the vet about the lame cow",
+            "time": "16:20",
+            "repeat": {
+              "freq": "weekly",
+              "by_day": [
+                "MO",
+                "TU",
+                "WE",
+                "TH",
+                "FR"
+              ]
+            }
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "repeat": {
+              "by_day": [
+                "MO",
+                "TU",
+                "WE",
+                "TH",
+                "FR"
+              ],
+              "freq": "weekly"
+            },
+            "task": "call the vet's the stock",
+            "time": "16:20"
+          }
+        },
+        "raw": "<|plan|>Recurring reminder every weekday at 16:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"by_day\":[\"MO\",\"TU\",\"WE\",\"TH\",\"FR\"],\"freq\":\"weekly\"},\"task\":\"call the vet's the stock\",\"time\":\"16:20\"}}"
+      },
+      {
+        "episode": "test-9002-36",
+        "turn": 3,
+        "gold": {
+          "type": "ask_user",
+          "question": "Okay. Tell me your idea: how should I look for leads?"
+        },
+        "pred": null,
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"can you donckonferrate\":\"se di want to know when for me\"}}"
+      },
+      {
+        "episode": "test-9002-36",
+        "turn": 4,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "Search for platinum band buyers in Thane"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "Search for anynivers"
+          }
+        },
+        "raw": "<|plan|>Find leads with the custom method.<|tool_call|>{\"tool\":\"leads.find\",\"arguments\":{\"method\":\"custom\",\"query\":\"Search for anynivers\"}}"
+      },
+      {
+        "episode": "test-9002-40",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "suppliers.csv"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "file.read",
+          "arguments": {
+            "path": "prices.csv"
+          }
+        },
+        "raw": "<|plan|>Read prices.csv.<|tool_call|>{\"tool\":\"file.read\",\"arguments\":{\"path\":\"prices.csv\"}}"
+      }
+    ]
+  },
+  "decisions_system": {
+    "mode": "system",
+    "decisions": 1416,
+    "decision_accuracy": 93.08,
+    "structured_output_validity": 99.72,
+    "action_type_accuracy": 95.62,
+    "tool_selection_accuracy": 90.58,
+    "argument_exact_accuracy": 89.64,
+    "scheduling_exact_accuracy": 95.54,
+    "ask_rate_on_ambiguous": 84.44,
+    "false_completion_rate": 0.0,
+    "response_text_exact": 97.59,
+    "counts": {
+      "decisions": 1416,
+      "valid": 1412,
+      "type_ok": 1354,
+      "correct": 1318,
+      "gold_tool_calls": 637,
+      "tool_ok": 577,
+      "args_ok": 571,
+      "text_cmp": 747,
+      "text_exact": 729,
+      "sched": 224,
+      "sched_ok": 214,
+      "after_error": 66,
+      "false_completion": 0,
+      "ambiguous": 135,
+      "asked": 114
+    },
+    "by_skill": {
+      "intent": {
+        "accuracy": 91.94,
+        "n": 893
+      },
+      "tool_selection": {
+        "accuracy": 89.05,
+        "n": 566
+      },
+      "argument_generation": {
+        "accuracy": 90.02,
+        "n": 541
+      },
+      "scheduling": {
+        "accuracy": 94.79,
+        "n": 192
+      },
+      "multi_step": {
+        "accuracy": 93.9,
+        "n": 82
+      },
+      "task_state": {
+        "accuracy": 84.14,
+        "n": 145
+      },
+      "error_recovery": {
+        "accuracy": 100.0,
+        "n": 106
+      },
+      "ambiguity": {
+        "accuracy": 84.44,
+        "n": 135
+      },
+      "completion_verification": {
+        "accuracy": 99.44,
+        "n": 537
+      },
+      "structured_output": {
+        "accuracy": 93.08,
+        "n": 1416
+      }
+    },
+    "by_category": {
+      "ambiguity": {
+        "accuracy": 88.76,
+        "n": 89
+      },
+      "ambiguity_followup": {
+        "accuracy": 96.15,
+        "n": 130
+      },
+      "chat": {
+        "accuracy": 96.55,
+        "n": 58
+      },
+      "delete": {
+        "accuracy": 87.98,
+        "n": 183
+      },
+      "file": {
+        "accuracy": 96.53,
+        "n": 144
+      },
+      "file_error": {
+        "accuracy": 98.41,
+        "n": 63
+      },
+      "gst": {
+        "accuracy": 92.57,
+        "n": 175
+      },
+      "gst_followup": {
+        "accuracy": 100.0,
+        "n": 28
+      },
+      "leads_ask": {
+        "accuracy": 58.33,
+        "n": 12
+      },
+      "leads_custom": {
+        "accuracy": 80.7,
+        "n": 57
+      },
+      "leads_direct": {
+        "accuracy": 78.87,
+        "n": 71
+      },
+      "leads_own_idea": {
+        "accuracy": 84.78,
+        "n": 46
+      },
+      "leads_pick": {
+        "accuracy": 80.19,
+        "n": 106
+      },
+      "list": {
+        "accuracy": 97.87,
+        "n": 94
+      },
+      "note": {
+        "accuracy": 95.51,
+        "n": 89
+      },
+      "out_of_scope": {
+        "accuracy": 83.02,
+        "n": 53
+      },
+      "question": {
+        "accuracy": 98.05,
+        "n": 205
+      },
+      "question_unknown": {
+        "accuracy": 96.97,
+        "n": 99
+      },
+      "scheduling_one_time": {
+        "accuracy": 94.68,
+        "n": 301
+      },
+      "scheduling_recurring": {
+        "accuracy": 95.63,
+        "n": 183
+      },
+      "scheduling_relative": {
+        "accuracy": 91.49,
+        "n": 94
+      }
+    },
+    "failures": [
+      {
+        "episode": "test-9002-0",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "finish",
+          "result": "I'm Arouse, a task assistant. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads."
+        },
+        "raw": "<|finish|>{\"result\":\"I'm Arouse, a task assistant. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads.\"}"
+      },
+      {
+        "episode": "test-9002-6",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9002-8",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "buy a birthday gift",
+            "in_minutes": 30
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9002-11",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Who could I sell to next"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Who could I sell to next\"}}"
+      },
+      {
+        "episode": "test-9002-17",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "Look up temple jewellery buyers in Thane"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Look up temple jewellery buyers in Thane"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Look up temple jewellery buyers in Thane\"}}"
+      },
+      {
+        "episode": "test-9002-20",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9002-22",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "raw": "<|plan|>Finding leads can be done in several ways: offer three and ask, or use the user's idea.<|ask_user|>{\"question\":\"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for ref"
+      },
+      {
+        "episode": "test-9002-26",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-2"
+          }
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder that matches what you asked, so I didn't delete anything."
+        },
+        "raw": "<|verify|>'drop the'call myactive' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
+      },
+      {
+        "episode": "test-9002-32",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "raw": "<|plan|>Finding leads can be done in several ways: offer three and ask, or use the user's idea.<|ask_user|>{\"question\":\"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for ref"
+      },
+      {
+        "episode": "test-9002-34",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "update the loan papers",
+            "date": "2026-01-26",
+            "time": "10:00"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "notes.create",
+          "arguments": {
+            "text": "update the loan papers"
+          }
+        },
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"update the loan papers\"}}"
+      },
+      {
+        "episode": "test-9002-36",
+        "turn": 3,
+        "gold": {
+          "type": "ask_user",
+          "question": "Okay. Tell me your idea: how should I look for leads?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "don't work for me"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"don't work for me\"}}"
+      },
+      {
+        "episode": "test-9002-53",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "raw": "<|plan|>Finding leads can be done in several ways: offer three and ask, or use the user's idea.<|ask_user|>{\"question\":\"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for ref"
+      },
+      {
+        "episode": "test-9002-54",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "top"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "raw": "<|plan|>Finding leads can be done in several ways: offer three and ask, or use the user's idea.<|ask_user|>{\"question\":\"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for ref"
+      },
+      {
+        "episode": "test-9002-58",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9002-60",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Could you tell me what GST stands for"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "tell me what GST stands for"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"tell me what GST stands for\"}}"
+      },
+      {
+        "episode": "test-9002-61",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "let's go with the first option"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"let's go with the first option\"}}"
+      },
+      {
+        "episode": "test-9002-65",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "top"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "raw": "<|plan|>Finding leads can be done in several ways: offer three and ask, or use the user's idea.<|ask_user|>{\"question\":\"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for ref"
+      },
+      {
+        "episode": "test-9002-68",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "Look up platinum band buyers in Thane"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Look up platinum band buyers in Thane"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Look up platinum band buyers in Thane\"}}"
+      },
+      {
+        "episode": "test-9002-74",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9002-77",
+        "turn": 4,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9002-77",
+        "turn": 6,
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: check the pregnancy test results for cow 12."
+        },
+        "pred": null,
+        "raw": "<|verify|>scheduler.delete succeeded (task_id r-1\"}}"
+      },
+      {
+        "episode": "test-9002-86",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "raw": "<|plan|>Finding leads can be done in several ways: offer three and ask, or use the user's idea.<|ask_user|>{\"question\":\"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for ref"
+      },
+      {
+        "episode": "test-9002-87",
+        "turn": 2,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9002-110",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9002-114",
+        "turn": 2,
+        "gold": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Who could I sell to next"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Who could I sell to next\"}}"
+      },
+      {
+        "episode": "test-9002-114",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "could I sell to next"
+          }
+        },
+        "raw": "<|plan|>Find leads with the custom method.<|tool_call|>{\"tool\":\"leads.find\",\"arguments\":{\"method\":\"custom\",\"query\":\"could I sell to next\"}}"
+      },
+      {
+        "episode": "test-9002-129",
+        "turn": 0,
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "raw": "<|plan|>Find the reminder, then delete it.<|tool_call|>{\"tool\":\"scheduler.list\",\"arguments\":{}}"
+      },
+      {
+        "episode": "test-9002-141",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "one"
+          }
+        },
+        "raw": "<|plan|>Find leads with the custom method.<|tool_call|>{\"tool\":\"leads.find\",\"arguments\":{\"method\":\"custom\",\"query\":\"one\"}}"
+      },
+      {
+        "episode": "test-9002-152",
+        "turn": 0,
+        "gold": {
+          "type": "finish",
+          "result": "I can't help with that yet. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "to Jaipur"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"to Jaipur\"}}"
+      },
+      {
+        "episode": "test-9002-163",
+        "turn": 0,
+        "gold": {
+          "type": "finish",
+          "result": "I can't help with that yet. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9002-163",
+        "turn": 2,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "top"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "the third option sounds good"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"the third option sounds good\"}}"
+      },
+      {
+        "episode": "test-9002-167",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "Look up temple jewellery buyers in Udaipur"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Look up temple jewellery buyers in Udaipur"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Look up temple jewellery buyers in Udaipur\"}}"
+      },
+      {
+        "episode": "test-9002-169",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.list",
+          "arguments": {}
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        },
+        "raw": "<|plan|>The time is missing, so I should ask instead of guessing.<|ask_user|>{\"question\":\"When should I remind you?\"}"
+      },
+      {
+        "episode": "test-9002-172",
+        "turn": 3,
+        "gold": {
+          "type": "finish",
+          "result": "I didn't find any customers matching \"Look up platinum band buyers in Guwahati\" in customers.csv."
+        },
+        "pred": null,
+        "raw": "<|verify|>leads.find returned 0.<|finish|>{\"result\":\"I didn't find any customers matching \\\"Look up\"}}"
+      },
+      {
+        "episode": "test-9002-173",
+        "turn": 0,
+        "gold": {
+          "type": "finish",
+          "result": "I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads. For example: 'Remind me tomorrow at 8 AM to check sales' or 'Find me leads'."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Tell me what you can do"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Tell me what you can do\"}}"
+      },
+      {
+        "episode": "test-9002-187",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "Look up pearl necklace buyers in Thane"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Look up pearl necklace buyers in Thane"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Look up pearl necklace buyers in Thane\"}}"
+      },
+      {
+        "episode": "test-9002-190",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "top"
+          }
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "raw": "<|plan|>Finding leads can be done in several ways: offer three and ask, or use the user's idea.<|ask_user|>{\"question\":\"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for ref"
+      },
+      {
+        "episode": "test-9002-202",
+        "turn": 0,
+        "gold": {
+          "type": "finish",
+          "result": "I can't help with that yet. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "to Jaipur"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"to Jaipur\"}}"
+      },
+      {
+        "episode": "test-9002-211",
+        "turn": 2,
+        "gold": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "kb.search",
+          "arguments": {
+            "query": "Who could I sell to next"
+          }
+        },
+        "raw": "<|plan|>Look this up in the knowledge base.<|tool_call|>{\"tool\":\"kb.search\",\"arguments\":{\"query\":\"Who could I sell to next\"}}"
+      },
+      {
+        "episode": "test-9002-219",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "inactive"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "leads.find",
+          "arguments": {
+            "method": "custom",
+            "query": "one"
+          }
+        },
+        "raw": "<|plan|>Find leads with the custom method.<|tool_call|>{\"tool\":\"leads.find\",\"arguments\":{\"method\":\"custom\",\"query\":\"one\"}}"
+      }
+    ]
+  },
+  "end_to_end": {
+    "episodes": 480,
+    "task_success_rate": 90.83,
+    "final_action_type_accuracy": 92.08,
+    "state_correct_rate": 96.88,
+    "guard_interventions": 0,
+    "episodes_with_invalid_output": 2,
+    "by_category": {
+      "ambiguity": {
+        "success": 84.38,
+        "n": 32
+      },
+      "ambiguity_followup": {
+        "success": 91.67,
+        "n": 24
+      },
+      "chat": {
+        "success": 100.0,
+        "n": 26
+      },
+      "delete": {
+        "success": 60.87,
+        "n": 23
+      },
+      "file": {
+        "success": 100.0,
+        "n": 30
+      },
+      "file_error": {
+        "success": 100.0,
+        "n": 10
+      },
+      "gst": {
+        "success": 100.0,
+        "n": 34
+      },
+      "gst_followup": {
+        "success": 100.0,
+        "n": 3
+      },
+      "leads_ask": {
+        "success": 50.0,
+        "n": 2
+      },
+      "leads_custom": {
+        "success": 100.0,
+        "n": 11
+      },
+      "leads_direct": {
+        "success": 36.84,
+        "n": 19
+      },
+      "leads_own_idea": {
+        "success": 83.33,
+        "n": 6
+      },
+      "leads_pick": {
+        "success": 77.78,
+        "n": 18
+      },
+      "list": {
+        "success": 95.83,
+        "n": 24
+      },
+      "note": {
+        "success": 100.0,
+        "n": 18
+      },
+      "out_of_scope": {
+        "success": 94.44,
+        "n": 18
+      },
+      "question": {
+        "success": 100.0,
+        "n": 39
+      },
+      "question_unknown": {
+        "success": 100.0,
+        "n": 23
+      },
+      "scheduling_one_time": {
+        "success": 90.48,
+        "n": 63
+      },
+      "scheduling_recurring": {
+        "success": 100.0,
+        "n": 39
+      },
+      "scheduling_relative": {
+        "success": 88.89,
+        "n": 18
+      }
+    },
+    "answer_correct_rate": 89.66,
+    "answer_checked": 319,
+    "answer_by_category": {
+      "delete": {
+        "correct": 65.0,
+        "n": 20
+      },
+      "file": {
+        "correct": 100.0,
+        "n": 23
+      },
+      "gst": {
+        "correct": 100.0,
+        "n": 34
+      },
+      "leads_custom": {
+        "correct": 50.0,
+        "n": 10
+      },
+      "leads_direct": {
+        "correct": 33.33,
+        "n": 18
+      },
+      "list": {
+        "correct": 95.83,
+        "n": 24
+      },
+      "note": {
+        "correct": 100.0,
+        "n": 18
+      },
+      "question": {
+        "correct": 100.0,
+        "n": 39
+      },
+      "question_unknown": {
+        "correct": 100.0,
+        "n": 23
+      },
+      "scheduling_one_time": {
+        "correct": 89.29,
+        "n": 56
+      },
+      "scheduling_recurring": {
+        "correct": 100.0,
+        "n": 38
+      },
+      "scheduling_relative": {
+        "correct": 87.5,
+        "n": 16
+      }
+    },
+    "failures": [
+      {
+        "episode": "test-9002-0",
+        "user": "I no longer need the reminder to buy a birthday gift. Delete it.",
+        "gold": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to buy a birthday gift."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "I'm Arouse, a task assistant. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads."
+        }
+      },
+      {
+        "episode": "test-9002-6",
+        "user": "Don't let me forget to clean the air filter this Wednesday.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder that matches what you asked, so I didn't delete anything."
+        }
+      },
+      {
+        "episode": "test-9002-8",
+        "user": "Half an hour from now, remind me to buy a birthday gift.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: buy a birthday gift on 2026-12-14 at 19:20."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9002-11",
+        "user": "Who could I sell to next?",
+        "gold": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business."
+        }
+      },
+      {
+        "episode": "test-9002-20",
+        "user": "Don't let me forget to renew the gym membership this Monday.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder that matches what you asked, so I didn't delete anything."
+        }
+      },
+      {
+        "episode": "test-9002-26",
+        "user": "Please drop the call my brother reminder.",
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: call my brother."
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder that matches what you asked, so I didn't delete anything."
+        }
+      },
+      {
+        "episode": "test-9002-32",
+        "user": "Who stopped buying from me?",
+        "gold": {
+          "type": "finish",
+          "result": "Found 3 leads (no purchase in 3 months): Gaurav Iyer (Guwahati, last bought 2025-08-25); Neha Menon (Udaipur, last bought 2025-11-03); Neha Verma (Coimbatore, last bought 2025-10-13)."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        }
+      },
+      {
+        "episode": "test-9002-34",
+        "user": "On Monday 10 AM: update the loan papers. Please remind me.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: update the loan papers on 2026-01-26 at 10:00."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Saved the note."
+        }
+      },
+      {
+        "episode": "test-9002-53",
+        "user": "Who stopped buying from me?",
+        "gold": {
+          "type": "finish",
+          "result": "Found 6 leads (no purchase in 3 months): Chirag Pillai (Coimbatore, last bought 2027-04-08); Arjun Khan (Ludhiana, last bought 2027-03-16); Bhavna Singh (Coimbatore, last bought 2027-03-23). Showing 3."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        }
+      },
+      {
+        "episode": "test-9002-54",
+        "user": "Rank my customers by spending.",
+        "gold": {
+          "type": "finish",
+          "result": "Found 5 leads (top customers, ask them for referrals): Bhavna Das (Udaipur, spent \u20b92,93,500); Neha Iyer (Thane, spent \u20b92,83,000); Chirag Verma (Raipur, spent \u20b91,86,500). Showing 3."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        }
+      },
+      {
+        "episode": "test-9002-65",
+        "user": "Rank my customers by spending.",
+        "gold": {
+          "type": "finish",
+          "result": "Found 14 leads (top customers, ask them for referrals): Esha Khan (Thane, spent \u20b92,85,000); Neha Menon (Thane, spent \u20b92,79,000); Asha Pillai (Guwahati, spent \u20b92,68,500). Showing 3."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        }
+      },
+      {
+        "episode": "test-9002-74",
+        "user": "Don't let me forget to send the photos to Priya on 30 April.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to send the photos to Priya."
+        }
+      },
+      {
+        "episode": "test-9002-86",
+        "user": "Who stopped buying from me?",
+        "gold": {
+          "type": "finish",
+          "result": "Found 5 leads (no purchase in 3 months): Bhavna Das (Raipur, last bought 2027-02-08); Asha Nair (Udaipur, last bought 2027-03-12); Ravi Rao (Ludhiana, last bought 2026-12-04). Showing 3."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        }
+      },
+      {
+        "episode": "test-9002-110",
+        "user": "Please drop the buy a birthday gift reminder.",
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: buy a birthday gift."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9002-129",
+        "user": "Don't let me forget to renew the gym membership on thursday.",
+        "gold": {
+          "type": "ask_user",
+          "question": "What time should I remind you?"
+        },
+        "pred": {
+          "type": "fail",
+          "error": "I couldn't find a reminder that matches what you asked, so I didn't delete anything."
+        }
+      },
+      {
+        "episode": "test-9002-163",
+        "user": "Book a train ticket to Jaipur",
+        "gold": {
+          "type": "finish",
+          "result": "I can't help with that yet. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST and find leads."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9002-169",
+        "user": "Please drop the renew the passport reminder.",
+        "gold": {
+          "type": "finish",
+          "result": "Deleted the reminder: renew the passport."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9002-224",
+        "user": "Who stopped buying from me?",
+        "gold": {
+          "type": "finish",
+          "result": "Found 5 leads (no purchase in 3 months): Gaurav Desai (Guwahati, last bought 2027-03-11); Chirag Patel (Thane, last bought 2027-02-24); Gaurav Shah (Thane, last bought 2027-06-25). Showing 3."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        }
+      },
+      {
+        "episode": "test-9002-233",
+        "user": "Who stopped buying from me?",
+        "gold": {
+          "type": "finish",
+          "result": "Found 3 leads (no purchase in 3 months): Esha Patel (Raipur, last bought 2026-06-01); Asha Reddy (Guwahati, last bought 2026-04-20); Vikram Verma (Udaipur, last bought 2026-03-17)."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        }
+      },
+      {
+        "episode": "test-9002-242",
+        "user": "Tomorrow 2 in the afternoon: call the accountant. Please remind me.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: call the accountant on 2027-03-04 at 14:00."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "Saved the note."
+        }
+      },
+      {
+        "episode": "test-9002-243",
+        "user": "Who could I sell to next?",
+        "gold": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business."
+        }
+      },
+      {
+        "episode": "test-9002-263",
+        "user": "Who could I sell to next?",
+        "gold": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        },
+        "pred": {
+          "type": "finish",
+          "result": "I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business."
+        }
+      },
+      {
+        "episode": "test-9002-275",
+        "user": "Please drop the clean the air filter reminder.",
+        "gold": {
+          "type": "fail",
+          "error": "I couldn't find a reminder to clean the air filter."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "When should I remind you?"
+        }
+      },
+      {
+        "episode": "test-9002-276",
+        "user": "Rank my customers by spending.",
+        "gold": {
+          "type": "finish",
+          "result": "Found 7 leads (top customers, ask them for referrals): Arjun Rao (Udaipur, spent \u20b92,92,500); Esha Reddy (Coimbatore, spent \u20b92,69,500); Esha Khan (Thane, spent \u20b92,62,500). Showing 3."
+        },
+        "pred": {
+          "type": "ask_user",
+          "question": "I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers, to ask for referrals. Which one? Or tell me your own idea."
+        }
+      },
+      {
+        "episode": "test-9002-282",
+        "user": "This Friday 7:45am: check the pregnancy test results for cow 12. Please remind me.",
+        "gold": {
+          "type": "finish",
+          "result": "Reminder set: check the pregnancy test results for cow 12 on 2026-12-04 at 07:45."
+        },
+        "pred": {
+          "type": "fail",
+          "error": "Sorry, I couldn't work out a valid next step for that request."
+        }
+      }
+    ]
+  },
+  "conversations": {
+    "episodes": 480,
+    "conversation_success_rate": 83.12,
+    "by_category": {
+      "ambiguity": {
+        "success": 80.0,
+        "n": 40
+      },
+      "ambiguity_followup": {
+        "success": 79.31,
+        "n": 29
+      },
+      "chat": {
+        "success": 100.0,
+        "n": 31
+      },
+      "delete": {
+        "success": 54.05,
+        "n": 37
+      },
+      "file": {
+        "success": 92.68,
+        "n": 41
+      },
+      "file_error": {
+        "success": 93.33,
+        "n": 15
+      },
+      "gst": {
+        "success": 81.25,
+        "n": 48
+      },
+      "gst_followup": {
+        "success": 80.0,
+        "n": 5
+      },
+      "leads_ask": {
+        "success": 0.0,
+        "n": 3
+      },
+      "leads_custom": {
+        "success": 43.75,
+        "n": 16
+      },
+      "leads_direct": {
+        "success": 39.13,
+        "n": 23
+      },
+      "leads_own_idea": {
+        "success": 22.22,
+        "n": 9
+      },
+      "leads_pick": {
+        "success": 29.17,
+        "n": 24
+      },
+      "list": {
+        "success": 92.31,
+        "n": 26
+      },
+      "note": {
+        "success": 88.0,
+        "n": 25
+      },
+      "out_of_scope": {
+        "success": 82.61,
+        "n": 23
+      },
+      "question": {
+        "success": 100.0,
+        "n": 55
+      },
+      "question_unknown": {
+        "success": 90.32,
+        "n": 31
+      },
+      "scheduling_one_time": {
+        "success": 83.33,
+        "n": 78
+      },
+      "scheduling_recurring": {
+        "success": 90.38,
+        "n": 52
+      },
+      "scheduling_relative": {
+        "success": 70.83,
+        "n": 24
+      }
+    },
+    "failures": [
+      {
+        "episode": "test-9002-0",
+        "category": "delete",
+        "why": "after 'I no longer need the reminder to buy a birthday gift. Delete': got {'type': 'finish', 'result': \"I'm Arouse, a task assistant. I can set reminders, take notes, read your files, answer questions about GST and business, calculate GST a"
+      },
+      {
+        "episode": "test-9002-6",
+        "category": "ambiguity",
+        "why": "after 'Don't let me forget to clean the air filter this Wednesday.': got {'type': 'fail', 'error': \"I couldn't find a reminder that matches what you asked, so I didn't delete anything.\"}"
+      },
+      {
+        "episode": "test-9002-8",
+        "category": "scheduling_relative+gst+scheduling_recurring",
+        "why": "after 'Half an hour from now, remind me to buy a birthday gift.': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      },
+      {
+        "episode": "test-9002-11",
+        "category": "leads_pick",
+        "why": "after 'Who could I sell to next?': got {'type': 'finish', 'result': \"I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business.\"}"
+      },
+      {
+        "episode": "test-9002-17",
+        "category": "scheduling_one_time+leads_custom+note",
+        "why": "after 'Look up temple jewellery buyers in Thane.': got {'type': 'finish', 'result': \"I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business.\"}"
+      },
+      {
+        "episode": "test-9002-20",
+        "category": "ambiguity",
+        "why": "after 'Don't let me forget to renew the gym membership this Monday.': got {'type': 'fail', 'error': \"I couldn't find a reminder that matches what you asked, so I didn't delete anything.\"}"
+      },
+      {
+        "episode": "test-9002-22",
+        "category": "gst+leads_direct",
+        "why": "after 'Who stopped buying from me?': got {'type': 'ask_user', 'question': \"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers,"
+      },
+      {
+        "episode": "test-9002-26",
+        "category": "delete",
+        "why": "after 'Please drop the call my brother reminder.': got {'type': 'fail', 'error': \"I couldn't find a reminder that matches what you asked, so I didn't delete anything.\"}"
+      },
+      {
+        "episode": "test-9002-32",
+        "category": "leads_direct+scheduling_one_time",
+        "why": "after 'Who stopped buying from me?': got {'type': 'ask_user', 'question': \"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers,"
+      },
+      {
+        "episode": "test-9002-34",
+        "category": "scheduling_one_time",
+        "why": "after 'On Monday 10 AM: update the loan papers. Please remind me.': got {'type': 'finish', 'result': 'Saved the note.'}"
+      },
+      {
+        "episode": "test-9002-36",
+        "category": "scheduling_recurring+leads_own_idea+list",
+        "why": "after 'these don't work for me': got {'type': 'finish', 'result': \"I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business.\"}"
+      },
+      {
+        "episode": "test-9002-53",
+        "category": "leads_direct",
+        "why": "after 'Who stopped buying from me?': got {'type': 'ask_user', 'question': \"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers,"
+      },
+      {
+        "episode": "test-9002-54",
+        "category": "leads_direct+scheduling_one_time+scheduling_relative",
+        "why": "after 'Rank my customers by spending.': got {'type': 'ask_user', 'question': \"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top custome"
+      },
+      {
+        "episode": "test-9002-61",
+        "category": "leads_pick",
+        "why": "after 'let's go with the first option': got {'type': 'finish', 'result': \"I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business.\"}"
+      },
+      {
+        "episode": "test-9002-65",
+        "category": "leads_direct",
+        "why": "after 'Rank my customers by spending.': got {'type': 'ask_user', 'question': \"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top custome"
+      },
+      {
+        "episode": "test-9002-68",
+        "category": "leads_custom+question_unknown",
+        "why": "after 'Look up platinum band buyers in Thane.': got {'type': 'finish', 'result': \"I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business.\"}"
+      },
+      {
+        "episode": "test-9002-74",
+        "category": "ambiguity",
+        "why": "after 'Don't let me forget to send the photos to Priya on 30 April.': got {'type': 'fail', 'error': \"I couldn't find a reminder to send the photos to Priya.\"}"
+      },
+      {
+        "episode": "test-9002-77",
+        "category": "gst+scheduling_relative+delete",
+        "why": "after 'Please drop the check the pregnancy test results for cow 12 ': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      },
+      {
+        "episode": "test-9002-86",
+        "category": "leads_direct",
+        "why": "after 'Who stopped buying from me?': got {'type': 'ask_user', 'question': \"I can find leads in 3 ways: 1) past customers who haven't bought in 3 months, 2) customers with a birthday or anniversary in the next 30 days, 3) your top customers,"
+      },
+      {
+        "episode": "test-9002-87",
+        "category": "file+ambiguity_followup",
+        "why": "after 'Don't let me forget to book the train tickets tomorrow.': got {'type': 'fail', 'error': 'I need your customer list to find leads. Add a file named customers.csv with the columns name, city, interest, last_purchase, total_spent, birth"
+      },
+      {
+        "episode": "test-9002-110",
+        "category": "delete+file_error",
+        "why": "after 'Please drop the buy a birthday gift reminder.': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      },
+      {
+        "episode": "test-9002-114",
+        "category": "scheduling_recurring+leads_pick",
+        "why": "after 'Who could I sell to next?': got {'type': 'finish', 'result': \"I don't know that yet. I can answer questions about GST, gold and jewellery, dairy and running a small business.\"}"
+      },
+      {
+        "episode": "test-9002-129",
+        "category": "ambiguity_followup+delete",
+        "why": "after 'Don't let me forget to renew the gym membership on thursday.': got {'type': 'fail', 'error': \"I couldn't find a reminder that matches what you asked, so I didn't delete anything.\"}"
+      },
+      {
+        "episode": "test-9002-141",
+        "category": "leads_pick",
+        "why": "after 'try option one': got {'type': 'fail', 'error': \"Sorry, I couldn't work out a valid next step for that request.\"}"
+      },
+      {
+        "episode": "test-9002-163",
+        "category": "out_of_scope+leads_pick+scheduling_recurring",
+        "why": "after 'Book a train ticket to Jaipur': got {'type': 'ask_user', 'question': 'When should I remind you?'}"
+      }
+    ]
+  },
+  "seconds": 2309.7
+}

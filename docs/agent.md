@@ -13,9 +13,9 @@ Layers of protection against unreliable model output:
 |---|---|---|
 | 1 | Token mask: the model can't emit `<|user|>`, `<|tool_result|>`, `<|tool_error|>`, `<|state|>`, … so it can't forge an observation | `inference/engine.py` |
 | 2 | Protocol and schema validation: a turn must decode to one valid action, and tool arguments must match the tool's schema. Otherwise the turn is resampled (greedy first, then 2 sampled retries), and finally an honest `fail` | `runtime.next_turn` |
-| 2b | Copy-constrained decoding. The model still chooses what to copy:<br>• `task`: only continuations of the user's words<br>• `text`: only continuations of the user's words, saved verbatim to the end of the sentence; for "label: content" messages, the whole content<br>• `path`: whole file names the user wrote or a tool listed<br>• `date`: only the dates the request refers to (today/tonight, tomorrow, weekday names, explicit dates, including Arouse's own questions); any calendar date if the request names no day | `agent/constraints.py` |
-| 2c | Grounding check, which triggers resampling:<br>• any remaining ungrounded free-text argument<br>• a `scheduler.delete` whose reminder was not listed, or is not the listed reminder that best matches the user's words | `agent/grounding.py` |
-| 2d | Answer guard: a final answer may only use Arouse's reply vocabulary plus words from this request. If no sample passes, the answer is written from the last tool result (`agent/answers.py`). If no grounded delete is found, the runtime fails instead of deleting | `runtime.next_turn` |
+| 2b | Copy-constrained decoding. The model still chooses what to copy:<br>• `task`: only continuations of the user's words<br>• `text` and `query`: only continuations of the user's words, verbatim to the end of the sentence; for "label: content" messages, the whole content<br>• `path`: whole file names the user wrote or a tool listed<br>• `date`: only the dates the request refers to<br>• `time`: only clock times the user wrote ("6:40pm", "9 in the morning"; "at 7" allows 07:00 or 19:00)<br>• `amount` and `rate` (GST): money phrases and %-rates exactly as written | `agent/constraints.py`, `agent/mentions.py` |
+| 2c | Grounding check, which triggers resampling:<br>• any remaining ungrounded argument<br>• a `scheduler.delete` whose reminder was not listed, or is not the listed reminder that best matches the user's words | `agent/grounding.py` |
+| 2d | Answer guard: a final answer may only use Arouse's reply vocabulary plus words from this request. Some text is written from the tool results instead of by the model:<br>• a confirmation after a successful tool call (reminder set, GST figures, knowledge-base answer, lead list)<br>• the "which file?" question after a missing file<br>• the answer, if no sample passes the guard<br>If no grounded delete is found, the runtime fails instead of deleting | `runtime.next_turn`, `agent/answers.py` |
 | 3 | Completion guard: a `finish` that directly follows a failed tool call, with no success since, is rewritten to `fail` | `runtime._guard` |
 | 4 | Step limit: at most 6 tool calls per user message | `runtime.run` |
 | 5 | Sandbox tools never raise. Bad input comes back as a `tool_error` observation the agent must handle | `agent/tools.py` |
@@ -38,6 +38,7 @@ Layers of protection against unreliable model output:
   - file read, file count, missing file → list → "did you mean"
   - transient errors → retry once → success or honest fail
   - greetings, help, thanks, and honest refusal of out-of-scope requests
+  - questions answered from the knowledge base (or "I don't know that yet"), GST calculations, finding leads ([skills.md](skills.md))
   - multi-request conversations
 - **Held-out split:** the benchmark uses tasks, note facts, file names and sentence templates that never appear in training (tested). The test split is byte-for-byte frozen: generator changes that add training variety must not change it (tested by sha256).
 - **v3 data** adds train-only variety:

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from arouse.agent.context import WEEKDAYS
+from arouse.agent.mentions import gst_mentions, mentioned_times
 from arouse.protocol import Action
 
 _COPY_FIELDS = {"scheduler.create": "task", "notes.create": "text", "kb.search": "query", "leads.find": "query"}
@@ -85,6 +86,18 @@ def delete_issue(task_id: str, events: list[dict[str, Any]]) -> str | None:
     return "no listed reminder matches the user's words"
 
 
+def _names_file(msg: str, path: str) -> bool:
+    """`path` occurs in `msg` as a whole name ("payments.c" is not named by "payments.csv")."""
+    low, p = msg.lower(), path.lower()
+    i = low.find(p)
+    while p and i != -1:
+        after = low[i + len(p):i + len(p) + 1]
+        if not after or not (after.isalnum() or after == "_"):
+            return True
+        i = low.find(p, i + 1)
+    return False
+
+
 def grounding_issue(action: Action, events: list[dict[str, Any]]) -> str | None:
     """None if the action is grounded, else a short reason."""
     if action.type != "tool_call":
@@ -92,19 +105,29 @@ def grounding_issue(action: Action, events: list[dict[str, Any]]) -> str | None:
     if action.tool == "scheduler.delete":
         return delete_issue(str(action.arguments.get("task_id", "")), events)
     req = current_request(events)
+    for i in range(len(req) - 1):  # repeating a call that failed for good can never help
+        prev, obs = req[i], req[i + 1]
+        if (prev["type"] == "arouse" and obs["type"] == "tool_error" and not obs["content"].get("retryable")
+                and prev["turn"]["action"].get("tool") == action.tool and prev["turn"]["action"].get("arguments") == action.arguments):
+            return f"this exact call already failed: {obs['content'].get('error')}"
     said = [ev["content"] for ev in req if ev["type"] == "user"]
     field = _COPY_FIELDS.get(action.tool)
     if field and field in action.arguments and not copied_from(action.arguments[field], said):
         return f"{field} '{action.arguments[field]}' is not a phrase the user said"
-    if action.tool == "gst.calculate":  # amount and rate are copied from the user's words, never invented
-        for key in ("amount", "rate"):
-            v = str(action.arguments.get(key, "")).strip().lower()
-            if not v or not any(v in m.lower() for m in said):
-                return f"{key} '{v}' is not something the user wrote"
+    if action.tool == "gst.calculate":  # an amount and a rate the user wrote (a rate is written with %)
+        amounts, rates = gst_mentions(req)
+        for key, allowed in (("amount", amounts), ("rate", rates)):
+            v = str(action.arguments.get(key, "")).strip()
+            if (allowed and v.lower() not in {x.lower() for x in allowed}) or not v or not any(v.lower() in m.lower() for m in said):
+                return f"{key} '{v}' is not the {key} the user wrote"
+    if action.tool == "scheduler.create" and "time" in action.arguments:
+        times = mentioned_times(said)
+        if times and action.arguments["time"] not in times:
+            return f"time {action.arguments['time']} is not a time the user wrote ({sorted(times)})"
     if action.tool == "file.read":
         path = action.arguments.get("path", "")
         listed = {f for ev in req if ev["type"] == "tool_result" for f in ev["content"].get("files", [])}
-        if path not in listed and not any(path.lower() in m.lower() for m in said):
+        if path not in listed and not any(_names_file(m, path) for m in said):
             return f"path '{path}' was neither named by the user nor listed"
     return None
 

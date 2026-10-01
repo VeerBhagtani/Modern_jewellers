@@ -125,3 +125,29 @@ def corrected_confirmation(action: Any, events: list[dict[str, Any]]) -> str | N
     if expected is None or text == expected or (expected.startswith(text) and text.endswith(".")):
         return None
     return expected
+
+
+def corrected_question(action: Any, events: list[dict[str, Any]]) -> str | None:
+    """If `action` asks which file to use after a failed file.read and a file.list, the question
+    stated from those tool results (same wording as the training data); else None."""
+    if action.type != "ask_user" or not (action.question or "").startswith("I couldn't find"):
+        return None
+    files, path = None, None
+    for i in range(len(events) - 1, 0, -1):
+        ev = events[i]
+        if ev["type"] == "user":
+            break
+        prev = events[i - 1]
+        call = prev["turn"]["action"] if prev["type"] == "arouse" else {}
+        if ev["type"] == "tool_result" and call.get("tool") == "file.list" and files is None:
+            files = ev["content"].get("files", [])
+        if ev["type"] == "tool_error" and call.get("tool") == "file.read" and files is not None:
+            path = call["arguments"].get("path")
+            break
+    if files is None or not path:
+        return None
+    stem = path.rsplit(".", 1)[0]
+    cands = [f for f in files if f.startswith(stem + "_")]
+    expected = (f"I couldn't find {path}. Did you mean {cands[0]}?" if cands
+                else f"I couldn't find {path}. Which file should I use? Available: {', '.join(files)}.")
+    return None if action.question == expected else expected

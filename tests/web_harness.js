@@ -26,6 +26,8 @@ if (req.replay) { // run every gold tool call of each episode through the JS san
   });
 }
 if (req.kb) out.kb = req.kb.map((q) => Arouse.kbSearch(q));
+if (req.times) out.times = req.times.map((t) => [...Arouse.mentionedTimes([t])].sort());
+if (req.gst) out.gst = req.gst.map((r) => Arouse.gstMentions(r).map((x) => [...x].sort()));
 
 if (req.tokenize) out.tokenize = req.tokenize.map((t) => tok.encode(t));
 if (req.answers) out.answers = req.answers.map((evs) => Arouse.answerFromResult(evs));
