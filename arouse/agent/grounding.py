@@ -53,10 +53,44 @@ def copied_from(value: str, messages: list[str]) -> bool:
     return False
 
 
+_STOP = {"the", "a", "an", "to", "my", "for", "of", "on", "in", "at", "and", "me", "about", "reminder", "reminders", "it",
+         "that", "this", "please", "i", "you"}
+
+
+def _content(text: str) -> set[str]:
+    return {w for w in _words(text) if w[0].isalnum() and w not in _STOP}
+
+
+def delete_issue(task_id: str, events: list[dict[str, Any]]) -> str | None:
+    """A reminder may only be deleted if a tool listed it in this request and its task is the
+    listed reminder that best matches the user's words (in this request; if nothing in this
+    request matches, e.g. "cancel that", in the whole conversation)."""
+    req = current_request(events)
+    listed: dict[str, str] = {}
+    for ev in req:
+        if ev["type"] == "tool_result":
+            for r in ev["content"].get("reminders", []):
+                listed[r["task_id"]] = r["task"]
+            if "task_id" in ev["content"] and "task" in ev["content"]:
+                listed[ev["content"]["task_id"]] = ev["content"]["task"]
+    if task_id not in listed:
+        return f"task_id {task_id} was not listed in this request"
+    for scope in (req, events):
+        said = set().union(*(_content(ev["content"]) for ev in scope if ev["type"] == "user"))
+        score = {tid: len(_content(t) & said) / max(len(_content(t)), 1) for tid, t in listed.items()}
+        if max(score.values()) > 0:
+            if score[task_id] < max(score.values()):
+                return f"'{listed[task_id]}' is not the reminder the user named"
+            return None
+    return "no listed reminder matches the user's words"
+
+
 def grounding_issue(action: Action, events: list[dict[str, Any]]) -> str | None:
     """None if the action is grounded, else a short reason."""
     if action.type != "tool_call":
         return None
+    if action.tool == "scheduler.delete":
+        return delete_issue(str(action.arguments.get("task_id", "")), events)
     req = current_request(events)
     said = [ev["content"] for ev in req if ev["type"] == "user"]
     field = _COPY_FIELDS.get(action.tool)
@@ -104,4 +138,27 @@ def answer_issue(action: Action, events: list[dict[str, Any]]) -> str | None:
     unknown = [w for w in answer_words(text)
                if w not in vocab and w not in seen and not re.fullmatch(r"\d{1,3}(st|nd|rd|th)?", w)  # counts, ordinals
                and not (any(c.isdigit() for c in w) and w in blob)]
-    return f"answer uses words not in the conversation: {unknown[:5]}" if unknown else None
+    if unknown:
+        return f"answer uses words not in the conversation: {unknown[:5]}"
+    return claim_issue(action, events)
+
+
+_NOT_FOUND = re.compile(r"couldn't find a reminder to (.+?)\.?$", re.I)
+
+
+def claim_issue(action: Action, events: list[dict[str, Any]]) -> str | None:
+    """A "couldn't find a reminder to X" answer must agree with the tools (X was not listed)
+    and must name what the user asked for (X is a phrase the user said)."""
+    m = _NOT_FOUND.search(action.error or "") if action.type == "fail" else None
+    if not m:
+        return None
+    target = m.group(1).strip()
+    req = current_request(events)
+    listed = {r["task"].lower() for ev in req if ev["type"] == "tool_result" for r in ev["content"].get("reminders", [])}
+    if target.lower() in listed:
+        return f"'{target}' was in the listed reminders"
+    v = _words(target)
+    if not any(_words(ev["content"])[i:i + len(v)] == v for ev in req if ev["type"] == "user"
+               for i in range(len(_words(ev["content"])))):
+        return f"'{target}' is not what the user asked for"
+    return None

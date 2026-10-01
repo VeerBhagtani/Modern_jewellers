@@ -12,6 +12,10 @@ Defence in depth against unreliable output:
   4. completion guard: `finish` right after a failed tool call (with no success since)
      is converted to `fail`, so a false "Done." never reaches the user
   5. step limit: at most `max_tool_calls` tool calls per user message
+  6. destructive calls: scheduler.delete must target the listed reminder that best matches
+     the user's words; if no sample does, the runtime fails instead of deleting
+  7. confirmations: a finish right after a successful tool call must state what the tool
+     returned; otherwise its text is written from the tool result
 """
 
 from __future__ import annotations
@@ -20,7 +24,7 @@ import dataclasses
 from collections.abc import Callable
 from typing import Any
 
-from arouse.agent.answers import answer_from_result
+from arouse.agent.answers import answer_from_result, corrected_confirmation
 from arouse.agent.constraints import CopyConstraint
 from arouse.agent.episode import Header, encode_prompt, turn_event
 from arouse.agent.grounding import answer_issue, grounding_issue
@@ -134,12 +138,19 @@ class AgentRuntime:
             if a.type == "finish" and answer_issue(a, events) is not None and (fixed := answer_from_result(events)):
                 turn = Turn(Action.finish(fixed), plan=r.turn.plan, verify="runtime: answer written from the tool result")
                 r = dataclasses.replace(r, turn=turn, rewritten=True)
+            elif a.type == "tool_call" and a.tool == "scheduler.delete":  # never delete a reminder the user did not name
+                turn = Turn(Action.fail("I couldn't find a reminder that matches what you asked, so I didn't delete anything."),
+                            plan=r.turn.plan, verify=f"runtime: {grounding_issue(a, events)}")
+                r = dataclasses.replace(r, turn=turn, rewritten=True)
             return self._guard(r, events)
         fallback = Turn(Action.fail("Sorry, I couldn't work out a valid next step for that request."),
                         verify="runtime: the model did not produce a valid action")
         return TurnResult(fallback, attempt, raw, False)
 
     def _guard(self, r: TurnResult, events: list[dict[str, Any]]) -> TurnResult:
+        if self.retries and (fixed := corrected_confirmation(r.turn.action, events)):  # system mode only
+            turn = Turn(Action.finish(fixed), plan=r.turn.plan, verify="runtime: confirmation written from the tool result")
+            r = dataclasses.replace(r, turn=turn, rewritten=True)
         if self.guard_completion and r.turn.action.type == "finish" and last_observation(events) == "tool_error":
             fixed = Turn(Action.fail("The last step failed, so the task was not completed."),
                          plan=r.turn.plan, verify="runtime guard: finish after a failed tool call")

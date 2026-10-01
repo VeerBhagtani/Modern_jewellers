@@ -15,6 +15,8 @@ torch = pytest.importorskip("torch")
 
 from arouse.agent.answers import answer_from_result  # noqa: E402
 from arouse.agent.constraints import CopyConstraint  # noqa: E402
+from arouse.agent.grounding import answer_issue, grounding_issue  # noqa: E402
+from arouse.protocol import Action  # noqa: E402
 from arouse.agent.runtime import AgentRuntime  # noqa: E402
 from arouse.agent.synth import episode_header, episode_sandbox  # noqa: E402
 from arouse.agent.tools import REGISTRY  # noqa: E402
@@ -158,9 +160,78 @@ def test_answers_and_copy_constraint_match_python(tmp_path, py_engine):
                     if field in args:
                         v = args[field]
                         conts += [[ep["events"][:i], ctx, field, v[:k]] for k in (0, len(v) // 2, len(v))]
-    js = run_js(tmp_path, answers=prefixes, continuations=conts)
+    actions, completes = [], []
+    for ep in eps:
+        for i, e in enumerate(ep["events"]):
+            a = e["type"] == "arouse" and e["turn"]["action"]
+            if a and a["type"] == "tool_call":
+                actions.append([a, ep["events"][:i]])
+                if a["tool"] == "scheduler.delete":  # also every other id, which must be refused
+                    actions += [[{**a, "arguments": {"task_id": f"r-{k}"}}, ep["events"][:i]] for k in range(1, 5)]
+                for field in ("task", "text", "path", "date"):
+                    if field in a["arguments"]:
+                        v = a["arguments"][field]
+                        completes += [[ep["events"][:i], episode_header(ep).context, field, v[:k]] for k in (len(v) // 2, len(v))]
+    texts = []
+    for ep in eps:
+        for i, e in enumerate(ep["events"]):
+            a = e["type"] == "arouse" and e["turn"]["action"]
+            if a and a["type"] != "tool_call":
+                texts.append([a, ep["events"][:i]])
+                if a["type"] == "fail" and "couldn't find a reminder to" in a["error"]:  # wrong claims must be caught too
+                    texts += [[{**a, "error": a["error"].replace("to ", "to the ", 1)}, ep["events"][:i]]]
+                if a["type"] == "finish":
+                    texts.append([{**a, "result": a["result"] + " Also the cow."}, ep["events"][:i]])
+    js = run_js(tmp_path, answers=prefixes, continuations=conts, grounding=actions, complete=completes, answer_issue=texts)
+    assert js["answer_issue"] == [answer_issue(Action.from_dict(a), evs) is not None for a, evs in texts]
+    assert sum(js["answer_issue"]) > 20
     assert js["answers"] == [answer_from_result(p) for p in prefixes]
+    assert js["grounding"] == [grounding_issue(Action.from_dict(a), evs) is not None for a, evs in actions]
+    assert js["complete"] == [CopyConstraint(py_engine.tokenizer, evs, ctx).complete(f, v) for evs, ctx, f, v in completes]
+    assert sum(a["tool"] == "scheduler.delete" for a, _ in actions) >= 20
     tok = py_engine.tokenizer
     for (evs, ctx, field, partial), got in zip(conts, js["continuations"], strict=True):
         assert got == sorted(CopyConstraint(tok, evs, ctx).continuations(field, partial)), (field, partial)
     assert len(conts) > 100
+
+
+def test_website_runs_the_model_in_the_browser():
+    """Serve web/ statically, load it in Chromium, and complete one real request."""
+    import functools
+    import http.server
+    import threading
+
+    sync_api = pytest.importorskip("playwright.sync_api")
+    exe = next((c for c in ("/opt/pw-browsers/chromium", shutil.which("chromium")) if c and Path(c).exists()), None)
+    if exe is None:
+        pytest.skip("no Chromium binary")
+
+    class Quiet(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, *args):  # noqa: ANN002
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Quiet, directory=str(WEB)))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        with sync_api.sync_playwright() as p:
+            browser = p.chromium.launch(executable_path=exe)
+            pg = browser.new_page(viewport={"width": 390, "height": 760})
+            errors: list[str] = []
+            pg.on("pageerror", lambda e: errors.append(str(e)))
+            pg.goto(f"http://127.0.0.1:{srv.server_port}/")
+            pg.wait_for_selector("#status.ok", timeout=120000)
+            pg.fill("#input", "Every Monday at 9 AM remind me to pay the staff.")
+            pg.keyboard.press("Enter")
+            pg.wait_for_selector(".msg.agent .answer", timeout=120000)
+            assert "pay the staff" in pg.inner_text(".msg.agent .answer")
+            pg.click("#tab-space")
+            assert "pay the staff" in pg.inner_text("#reminders") and "Weekly" in pg.inner_text("#reminders")
+            assert pg.evaluate("document.documentElement.scrollWidth") <= 390  # no sideways scroll on a phone
+            pg.reload()
+            pg.wait_for_selector("#status.ok", timeout=120000)
+            assert pg.locator(".msg.user").count() == 1  # the conversation survives a reload
+            assert not errors
+            browser.close()
+    finally:
+        srv.shutdown()
+        srv.server_close()

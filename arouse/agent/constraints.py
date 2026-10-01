@@ -36,7 +36,7 @@ _DATE_PATTERNS = [
 ]
 # Where a copied value must stop: sentence punctuation (all fields) and, for reminder
 # tasks, the start of a time/date phrase (" at 5", " in 3 hours", " on Sunday", " every ...").
-_STOP_ALL = re.compile(r"[.?!;]|\s(?:please|pls|thanks|thank you|thx)\b", re.I)
+_STOP_ALL = re.compile(r"[?!;]|\.(?=\s|$)|\s(?:please|pls|thanks|thank you|thx)\b", re.I)  # "4.50" is not an end
 _STOP_PATH = re.compile(r"[\s?!;,]|\.(?:\s|$)")  # a file name ends at whitespace or a sentence-final "."
 _DAYS = "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
 _STOP_TASK = re.compile(
@@ -46,6 +46,22 @@ _STOP_TASK = re.compile(
 )
 _CLOSE = re.compile(r'^"([,}\]].*)?$', re.S)  # closes the string; the rest is ordinary JSON structure
 _VOCAB: dict[str, tuple[dict[str, list[int]], list[int], int]] = {}
+
+
+_LABEL = re.compile(r"^\s*([^:\n]{1,60}?):\s+(?=\S)")
+
+
+def label_end(src: str) -> int | None:
+    """For "<short label>: <content>" ("Please jot down: ...", "Memo: ..."), where the content starts."""
+    m = _LABEL.match(src)
+    return m.end() if m and len(m.group(1).split()) <= 6 else None
+
+
+def _ends_sentence(rest: str) -> bool:
+    """`rest` (what follows a copied note) starts at the end of its sentence."""
+    m = _STOP_ALL.search(rest)
+    before = rest if m is None else rest[:m.start()]
+    return not any(c.isalnum() for c in before)  # only spaces/punctuation before the stop (", thanks")
 
 
 def mentioned_dates(texts: list[str], today: date) -> set[str]:
@@ -169,6 +185,8 @@ class CopyConstraint:
                     i = src.find(partial, i + 1)
             if whole:
                 starts = [i for i in starts if i == 0]
+            if field == "text" and (lab := label_end(src)) is not None:
+                starts = [i for i in starts if i == lab]  # a labelled note is the whole content after the label
             if field == "task" and not partial:
                 starts = [i for i in starts if not src[i].isdigit()]  # tasks start with a word, not "40 PM"
             for i in starts:
@@ -192,7 +210,20 @@ class CopyConstraint:
             return False
         if field == "path":
             return value in self.listed or ("." in value and any(value in s for s in self.sources["path"]))
+        if field == "text":  # a note is saved verbatim to the end of its sentence
+            return any(value == src[i:i + len(value)] and _ends_sentence(src[i + len(value):])
+                       and label_end(src) in (None, i)
+                       for src in self.sources["text"] for i in self._starts(src, value))
         return copied_from(value, self.sources[field])
+
+    @staticmethod
+    def _starts(src: str, value: str) -> list[int]:
+        out, i = [], src.find(value)
+        while i != -1:
+            if i == 0 or not src[i - 1].isalnum():
+                out.append(i)
+            i = src.find(value, i + 1)
+        return out
 
     def __call__(self, generated: list[int], logits: torch.Tensor) -> torch.Tensor:
         state = self.open_field(generated)

@@ -502,8 +502,33 @@
     }
     return false;
   }
+  const STOPWORDS = new Set(["the", "a", "an", "to", "my", "for", "of", "on", "in", "at", "and", "me", "about", "reminder",
+    "reminders", "it", "that", "this", "please", "i", "you"]);
+  const content = (text) => new Set(words(text).filter((w) => /^[\p{L}\p{N}]/u.test(w) && !STOPWORDS.has(w)));
+  function deleteIssue(taskId, events) {
+    const req = currentRequest(events), listed = new Map();
+    for (const ev of req) {
+      if (ev.type !== "tool_result") continue;
+      for (const r of ev.content.reminders || []) listed.set(r.task_id, r.task);
+      if ("task_id" in ev.content && "task" in ev.content) listed.set(ev.content.task_id, ev.content.task);
+    }
+    if (!listed.has(taskId)) return `task_id ${taskId} was not listed in this request`;
+    for (const scope of [req, events]) {
+      const said = new Set();
+      for (const ev of scope) if (ev.type === "user") for (const w of content(ev.content)) said.add(w);
+      const score = new Map();
+      for (const [tid, t] of listed) {
+        const c = content(t);
+        score.set(tid, [...c].filter((w) => said.has(w)).length / Math.max(c.size, 1));
+      }
+      const best = Math.max(...score.values());
+      if (best > 0) return score.get(taskId) < best ? `'${listed.get(taskId)}' is not the reminder the user named` : null;
+    }
+    return "no listed reminder matches the user's words";
+  }
   function groundingIssue(action, events) {
     if (action.type !== "tool_call") return null;
+    if (action.tool === "scheduler.delete") return deleteIssue(String(action.arguments.task_id || ""), events);
     const req = currentRequest(events), said = req.filter((e) => e.type === "user").map((e) => e.content);
     const field = COPY_FIELDS[action.tool];
     if (field && field in action.arguments && !copiedFrom(action.arguments[field], said)) return `${field} not grounded`;
@@ -528,7 +553,21 @@
     const seen = new Set(sources.flatMap(answerWords)), blob = sources.join(" ").toLowerCase();
     const unknown = answerWords(text).filter((w) => !vocab.has(w) && !seen.has(w) && !/^\d{1,3}(st|nd|rd|th)?$/.test(w)
       && !(/\d/.test(w) && blob.includes(w)));
-    return unknown.length ? `answer uses unknown words: ${unknown.slice(0, 5)}` : null;
+    if (unknown.length) return `answer uses unknown words: ${unknown.slice(0, 5)}`;
+    return claimIssue(action, events);
+  }
+  // A "couldn't find a reminder to X" answer must agree with the tools and name what the user asked for.
+  const NOT_FOUND = /couldn't find a reminder to (.+?)\.?$/i;
+  function claimIssue(action, events) {
+    const m = action.type === "fail" ? NOT_FOUND.exec(action.error || "") : null;
+    if (!m) return null;
+    const target = m[1].trim(), req = currentRequest(events);
+    const listed = new Set(req.filter((e) => e.type === "tool_result").flatMap((e) => (e.content.reminders || []).map((r) => r.task.toLowerCase())));
+    if (listed.has(target.toLowerCase())) return `'${target}' was in the listed reminders`;
+    const v = words(target).join("\u0000");
+    const said = req.filter((e) => e.type === "user").map((e) => words(e.content));
+    if (!said.some((w) => w.some((_, i) => w.slice(i, i + words(target).length).join("\u0000") === v))) return `'${target}' is not what the user asked for`;
+    return null;
   }
   // json.dumps default formatting (", " and ": "), used only for word extraction
   function pyJson(v) { return JSON.stringify(v).replace(/","/g, '", "').replace(/":/g, '": '); }
@@ -540,7 +579,7 @@
     new RegExp(`\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?(${MONTH_RE})\\b`, "gi"),
   ];
   const DAYS_RE = "monday|tuesday|wednesday|thursday|friday|saturday|sunday";
-  const STOP_ALL = /[.?!;]|\s(?:please|pls|thanks|thank you|thx)\b/i;
+  const STOP_ALL = /[?!;]|\.(?=\s|$)|\s(?:please|pls|thanks|thank you|thx)\b/i;
   const STOP_PATH = /[\s?!;,]|\.(?:\s|$)/;
   const STOP_TASK = new RegExp(`[,:]|\\s(?:at|in|on|by|after|from|before)\\s+(?:\\d|an?\\s|half|the\\s\\d|${DAYS_RE}|noon|midnight)` +
     `|\\s(?:tomorrow|today|tonight|every|each|daily|weekly|monthly|next|this)\\b|\\s(?:${DAYS_RE})\\b`, "i");
@@ -579,6 +618,12 @@
     for (const k of pieces.keys()) maxlen = Math.max(maxlen, k.length);
     tok._pieces = { pieces, closing, closerText, maxlen };
     return tok._pieces;
+  }
+
+  const LABEL = /^\s*([^:\n]{1,60}?):\s+(?=\S)/;
+  function labelEnd(src) { // "<short label>: <content>": where the content starts
+    const m = LABEL.exec(src);
+    return m && m[1].split(/\s+/).filter(Boolean).length <= 6 ? m[0].length : null;
   }
 
   function referencedDates(texts, now) {
@@ -640,6 +685,8 @@
           for (let i = src.indexOf(partial); i !== -1; i = src.indexOf(partial, i + 1)) if (i === 0 || !word(src[i - 1])) starts.push(i);
         }
         if (whole) starts = starts.filter((i) => i === 0);
+        const lab = field === "text" ? labelEnd(src) : null;
+        if (lab !== null) starts = starts.filter((i) => i === lab); // a labelled note is the whole content after the label
         if (field === "task" && !partial) starts = starts.filter((i) => !/\d/.test(src[i]));
         for (const i of starts) {
           let rest = src.slice(i + partial.length);
@@ -659,6 +706,18 @@
       if (field === "date") return this.dates.includes(value);
       if (!value.trim() || value !== value.trim()) return false;
       if (field === "path") return this.listed.has(value) || (value.includes(".") && this.sources.path.some((s) => s.includes(value)));
+      if (field === "text") { // a note is saved verbatim to the end of its sentence
+        return this.sources.text.some((src) => {
+          for (let i = src.indexOf(value); i !== -1; i = src.indexOf(value, i + 1)) {
+            if (i > 0 && isAlnum(src[i - 1])) continue;
+            const lab = labelEnd(src);
+            if (lab !== null && lab !== i) continue;
+            const rest = src.slice(i + value.length), m = STOP_ALL.exec(rest), before = m ? rest.slice(0, m.index) : rest;
+            if (![...before].some(isAlnum)) return true;
+          }
+          return false;
+        });
+      }
       return copiedFrom(value, this.sources[field]);
     }
     hook() {
@@ -833,6 +892,14 @@
     return null;
   }
 
+  /** A finish confirming a successful tool call must state what the tool returned (see answers.py). */
+  function correctedConfirmation(action, events) {
+    if (action.type !== "finish") return null;
+    const expected = answerFromResult(events), text = action.result || "";
+    if (expected === null || text === expected || (expected.startsWith(text) && text.endsWith("."))) return null;
+    return expected;
+  }
+
   // ---------------------------------------------------------------- runtime
   function lastObservation(events) {
     for (let i = events.length - 1; i >= 0; i--) {
@@ -890,12 +957,20 @@
         const a = r.turn.action, fixed = a.type === "finish" && answerIssue(a, events, this.vocab) ? answerFromResult(events) : null;
         if (fixed) r = { ...r, rewritten: true, turn: { action: { type: "finish", result: fixed }, plan: r.turn.plan,
           verify: "runtime: answer written from the tool result" } };
+        else if (a.type === "tool_call" && a.tool === "scheduler.delete") { // never delete a reminder the user did not name
+          r = { ...r, rewritten: true, turn: { action: { type: "fail",
+            error: "I couldn't find a reminder that matches what you asked, so I didn't delete anything." }, plan: r.turn.plan,
+          verify: `runtime: ${groundingIssue(a, events)}` } };
+        }
         return this.guard(r, events);
       }
       return { turn: { action: { type: "fail", error: "Sorry, I couldn't work out a valid next step for that request." }, plan: null,
         verify: "runtime: the model did not produce a valid action" }, attempts: attempt, raw, valid: false, guarded: false, grounded: true };
     }
     guard(res, events) {
+      const fixed = this.retries ? correctedConfirmation(res.turn.action, events) : null; // system mode only
+      if (fixed) res = { ...res, rewritten: true, turn: { action: { type: "finish", result: fixed }, plan: res.turn.plan,
+        verify: "runtime: confirmation written from the tool result" } };
       if (this.guardCompletion && res.turn.action.type === "finish" && lastObservation(events) === "tool_error") {
         return { ...res, guarded: true, turn: { action: { type: "fail", error: "The last step failed, so the task was not completed." },
           plan: res.turn.plan, verify: "runtime guard: finish after a failed tool call" } };
@@ -962,6 +1037,6 @@
 
   const api = { S, Tokenizer, Model, Engine, Runtime, Sandbox, CopyConstraint, ProtocolError, loadArouse, buildContext,
     calendarText, encodePrompt, encodeTurnBody, decodeTurn, canonicalJson, validateCall, groundingIssue, answerIssue,
-    copiedFrom, mentionedDates, answerFromResult, TOOL_NAMES, SYSTEM_PROMPT, fmtDT, firstRun };
+    copiedFrom, mentionedDates, answerFromResult, correctedConfirmation, TOOL_NAMES, SYSTEM_PROMPT, fmtDT, firstRun };
   root.Arouse = api;
 })(typeof self !== "undefined" ? self : this);

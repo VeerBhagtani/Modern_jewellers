@@ -12,6 +12,12 @@ const out = {};
 
 if (req.tokenize) out.tokenize = req.tokenize.map((t) => tok.encode(t));
 if (req.answers) out.answers = req.answers.map((evs) => Arouse.answerFromResult(evs));
+const vocabAll = new Set(fs.readFileSync(path.join(dir, "response_vocab.txt"), "utf8").split(/\s+/).filter(Boolean));
+if (req.answer_issue) out.answer_issue = req.answer_issue.map(([action, evs]) => Arouse.answerIssue(action, evs, vocabAll) !== null);
+if (req.grounding) out.grounding = req.grounding.map(([action, evs]) => Arouse.groundingIssue(action, evs) !== null);
+if (req.complete) {
+  out.complete = req.complete.map(([evs, ctx, field, value]) => new Arouse.CopyConstraint(tok, evs, ctx).complete(field, value));
+}
 if (req.continuations) {
   out.continuations = req.continuations.map(([evs, ctx, field, partial]) =>
     new Arouse.CopyConstraint(tok, evs, ctx).continuations(field, partial).sort());
@@ -23,7 +29,7 @@ if (req.logits || req.decisions || req.episodes) {
   const engine = new Arouse.Engine(model, tok);
   const vocab = new Set(fs.readFileSync(path.join(dir, "response_vocab.txt"), "utf8").split(/\s+/).filter(Boolean));
   const at = (s) => { const [d, t] = s.split("T"); const [y, mo, dd] = d.split("-").map(Number); const [h, mi] = t.split(":").map(Number); return new Date(y, mo - 1, dd, h, mi); };
-  const header = (ep) => ({ context: Arouse.buildContext(at(ep.now), "Asia/Kolkata"), tools: Arouse.TOOL_NAMES });
+  const header = (ep) => ({ context: Arouse.buildContext(at(ep.now), req.timezone || "Asia/Kolkata"), tools: Arouse.TOOL_NAMES });
 
   if (req.logits) {
     out.logits = req.logits.map((ids) => {

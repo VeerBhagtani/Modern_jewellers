@@ -76,3 +76,15 @@ def answer_from_result(events: list[dict[str, Any]]) -> str | None:
                 return None
             return None
     return None
+
+
+def corrected_confirmation(action: Any, events: list[dict[str, Any]]) -> str | None:
+    """If `action` is a finish that confirms a successful tool call but does not state what the
+    tool returned, the correct confirmation; else None. ("x has N lines." may leave out the preview.)"""
+    if action.type != "finish":
+        return None
+    expected = answer_from_result(events)
+    text = action.result or ""
+    if expected is None or text == expected or (expected.startswith(text) and text.endswith(".")):
+        return None
+    return expected

@@ -16,7 +16,22 @@ MDA (Modern Dairy Assistant) is a separate frontend. It connects through `POST /
 
 ![Arouse chat UI](docs/images/chat_ui.png)
 
-## Quick start (uses the trained model in this repo)
+## Use it in your browser
+
+`web/` is a static website that runs the trained model entirely in the browser, with no server-side model and no external AI service ([docs/web.md](docs/web.md)):
+
+```bash
+python -m http.server 8080 -d web      # open http://localhost:8080
+```
+
+- **Workspace:** reminders, notes and files live in the browser. Three sample files are included, and you can add your own text or CSV files.
+- **Firing reminders:** reminders fire while the page is open.
+- **GitHub Pages:** `.github/workflows/pages.yml` publishes the site (enable Pages with "GitHub Actions" as the source).
+- **JS port:** the JavaScript runtime (`web/arouse.js`) is tested against the Python one: same token ids, same prompts, logits equal within float rounding, and identical decisions whenever no resampling is needed.
+
+![Arouse website](docs/images/web_ui.png)
+
+## Quick start (Python, local API)
 
 ```bash
 pip install -e ".[dev]"
@@ -37,10 +52,10 @@ Tools run in a local in-memory sandbox. A real, unedited conversation is in [doc
 
 ## What Arouse can and cannot do (honest scope)
 
-`models/arouse-agent-s` has **5.5M parameters** and was **trained on CPU** in this repo:
+`models/arouse-agent-s` has **5.5M parameters** and was **trained on CPU** in this repo, about 86M tokens in total:
 - 2,000 steps on `agent_v1`
-- then a 2,000-step fine-tune on `agent_v2`
-- about 49M tokens in total
+- 2,000 steps on `agent_v2`
+- 3,000 steps on `agent_v3`, which adds phrasing variety aimed at the measured weak spots
 
 The training data is **synthetic agent episodes only**.
 
@@ -59,7 +74,7 @@ The training data is **synthetic agent episodes only**.
 
 ## Results (Arouse AgentBench v1, real runs)
 
-`arouse bench`, full runs, with reports in `benchmarks/results/`:
+`arouse bench`, full runs, with reports in `benchmarks/results/` (earlier runs in `benchmarks/results/history/`):
 - **Held-out:** 1198 decisions from 400 episodes. Their tasks, notes, file names and sentence templates never appear in training.
 - **In-distribution:** 456 decisions from 150 episodes. Same templates as training, but unseen samples.
 
@@ -69,32 +84,41 @@ Two modes are reported:
 
 | Metric | Held-out raw | Held-out system | In-dist raw | In-dist system |
 |---|---|---|---|---|
-| Decision accuracy (type + exact tool and arguments) | 61.69% | **78.96%** | 89.91% | **93.86%** |
-| Structured-output validity | 97.33% | **99.58%** | 99.12% | **100.0%** |
-| Action-type accuracy | 89.32% | **91.4%** | 98.46% | **99.34%** |
-| Tool-selection accuracy | 87.03% | **88.53%** | 97.56% | **99.51%** |
-| Argument exact match | 30.26% | **66.73%** | 78.54% | **87.32%** |
-| Scheduling exact match | 18.12% | **76.05%** | 74.38% | **80.99%** |
-| Asks when a detail is missing | 71.96% | **71.96%** | 100.0% | **100.0%** |
+| Decision accuracy (type + exact tool and arguments) | 65.36% | **93.24%** | 90.79% | **99.34%** |
+| Structured-output validity | 91.07% | **98.66%** | 100.0% | **100.0%** |
+| Action-type accuracy | 88.06% | **95.58%** | 99.56% | **99.56%** |
+| Tool-selection accuracy | 83.83% | **92.86%** | 100.0% | **99.51%** |
+| Argument exact match | 34.21% | **89.85%** | 80.49% | **99.02%** |
+| Scheduling exact match | 18.45% | **92.56%** | 76.03% | **99.17%** |
+| Asks when a detail is missing | 95.33% | **95.33%** | 100.0% | **100.0%** |
 | False completion (finish after a tool error) | 0.0% | **0.0%** | 0.0% | **0.0%** |
-| **End-to-end task success** (correct final action and correct resulting state) | — | **71.25%** | — | **88.0%** |
+| **End-to-end task success** (correct final action and correct resulting state) | — | **92.75%** | — | **98.0%** |
 
-**Strong on held-out requests (end to end):**
-- recurring reminders: 98.48%
-- relative reminders: 92.0%
-- listing reminders: 100.0%
-- missing-file recovery: 100.0%
-- greetings and help: 100.0%
-- error recovery: 95.45% of decisions
-- false completion: 0% (it never claimed success after a failed tool call)
+### What changed in this round (held-out, end to end)
 
-**Weak on held-out requests (end to end):**
-- unseen note phrasings such as "Please jot down: …": 22.22%
-- delete requests: 32.14%
-- out-of-scope questions: 40.0%
-- one-time reminders: 57.97% held-out, 59.38% in-distribution. Mostly wrong dates, especially "today" when the time has already passed.
+| Category (n) | Previous release | Same model, new runtime | **New model + new runtime** |
+|---|---|---|---|
+| All episodes (400) | 71.25% | 85.0% | **92.75%** |
+| Notes (27) | 22.22% | 100.0% | **100.0%** |
+| Out-of-scope questions (15) | 40.0% | 40.0% | **100.0%** |
+| Ambiguous requests (34) | 61.76% | 61.76% | **94.12%** |
+| Answering a follow-up question (32) | 75.0% | 75.0% | **96.88%** |
+| One-time reminders (69) | 57.97% | 86.96% | **91.3%** |
+| File questions (40) | 67.5% | 100.0% | **100.0%** |
+| Delete (28) | 32.14% | 35.71% | **42.86%** |
+| Recurring reminders (66) | 98.48% | 98.48% | **96.97%** |
+| Relative reminders (25) | 92.0% | 92.0% | **92.0%** |
+| Listing, greetings, missing file | 100% | 100% | **100%** |
 
-The gap between raw and system numbers is what the runtime's constrained decoding and grounding add. The gap between held-out and in-distribution numbers shows that a 5.5M model trained only on synthetic templates generalizes partially to new phrasings. More varied training data and a larger model are the next step.
+The middle column isolates the runtime changes; the difference to the last column is the extra training.
+
+**Read these numbers with care:**
+- **The held-out set is no longer fully blind for the runtime.** The new runtime rules were designed after inspecting held-out failures. The rules are general (no template strings), but they were motivated by this test set. The raw-model numbers are not affected.
+- **Raw validity dropped:** the raw model's structured-output validity on held-out requests fell from 97.33% to 91.07%. The runtime recovers most of it (98.66%).
+- **Still weak:** deletes with unseen phrasing ("Please drop the … reminder" is read as a new reminder). The runtime now refuses to delete a reminder the user did not name, so these fail safely instead of deleting the wrong one.
+- **Small regressions:** recurring reminders lost one episode (98.48% → 96.97%). Error-recovery decisions went from 95.45% to 93.94% (one decision).
+
+The gap between held-out and in-distribution numbers shows that a 5.5M model trained only on synthetic templates generalizes only partly to new phrasings. A larger model and real text are the next step.
 
 ## How reliability is engineered
 
@@ -102,8 +126,9 @@ The gap between raw and system numbers is what the runtime's constrained decodin
 |---|---|
 | Action protocol ([docs/protocol.md](docs/protocol.md)) | Exactly one schema-validated action per turn; a single token decides the action type |
 | Token mask | The model cannot emit `<|user|>`, `<|tool_result|>` and similar tokens, so it cannot fake an observation |
-| Copy-constrained decoding | Task, note and path text can only be copied from the user's words or listed files. Dates can only come from the runtime calendar or dates the user wrote. The model still chooses which phrase or date |
-| Answer guard | Final answers may only use Arouse's trained response vocabulary plus words from the conversation or tool results |
+| Copy-constrained decoding | The model still chooses which phrase or date:<br>• task and note text can only be copied from the user's words; notes are copied verbatim to the end of the sentence<br>• file paths must be whole file names the user wrote or a tool listed<br>• dates can only be ones the request refers to ("Friday", "tomorrow", "October 5", …) |
+| Delete safety | A reminder is deleted only if it was listed and is the listed reminder that best matches the user's words. Otherwise Arouse fails without deleting anything |
+| Answer guard | Final answers may only use Arouse's trained response vocabulary plus words from the conversation or tool results. A confirmation must state what the tool actually returned (otherwise it is written from the tool result), and "couldn't find" claims must agree with the listed reminders |
 | Validation, retries, grounding | Invalid or ungrounded turns are resampled; otherwise the runtime returns an honest `fail` |
 | Completion guard | A `finish` right after a failed tool call becomes `fail`. False "Done." messages never reach the user |
 | Deterministic tools | "The model understands, code computes": the scheduler turns rules and offsets into times |
@@ -117,15 +142,18 @@ arouse data prepare --config configs/data_agent.yaml
 arouse train --config configs/train_agent_s.yaml                             # auto-resumes after a crash
 python scripts/build_agent_data.py --name agent_v2 && arouse data prepare --config configs/data_agent_v2.yaml
 arouse train --config configs/train_agent_s_v2.yaml                          # fine-tune (init_from)
-arouse model export --model checkpoints/arouse-agent-s-v2 --out models/arouse-agent-s
+python scripts/build_agent_data.py --name agent_v3 && arouse data prepare --config configs/data_agent_v3.yaml
+arouse train --config configs/train_agent_s_v3.yaml                          # fine-tune from the v2 model
+arouse model export --model checkpoints/arouse-agent-s-v3 --out models/arouse-agent-s
 arouse bench --model models/arouse-agent-s --file benchmarks/agentbench_v1/test.jsonl
+python scripts/export_web.py --model models/arouse-agent-s --out web/model   # float16 weights for the website
 ```
 
 Notes:
 - `train_agent_s.yaml` is the 4,000-step schedule; the shipped model used its step-2,000 checkpoint.
-- The generator now produces the v2 format. The exact v1-phase data came from commit `246e0eb`.
+- The generator now produces the v3 data. The exact v1-phase data came from commit `246e0eb`.
 - `models/arouse-agent-s/` contains the exact tokenizer the model was trained with.
-- Rebuilding the data regenerates `benchmarks/agentbench_v1/*.jsonl` from fixed seeds, so the committed benchmark files are overwritten with identical content.
+- Rebuilding the data leaves `benchmarks/agentbench_v1/*.jsonl` alone unless you pass `--bench`. The held-out test split is frozen byte for byte (tested).
 
 The 110M-parameter v0.1 configuration (`configs/model.yaml`, 110,119,680 params) uses the same code and needs a GPU.
 
@@ -152,6 +180,7 @@ arouse/
   agent/      context (calendar), tools (sandbox), episode encoding, runtime, grounding, constraints, synth
   evaluation/ agentbench.py
   api/        server.py (stdlib HTTP), agent_service.py, static/index.html (chat UI)
+web/          the website: arouse.js (JS port), worker.js, index.html, model/ (float16 weights, 11 MB)
 configs/      model, tokenizer, data and training YAMLs
 models/       arouse-agent-s (trained weights, 22 MB)
 benchmarks/   agentbench_v1 cases + results/
@@ -166,4 +195,6 @@ tests/        pytest suite
 pytest -q
 ```
 
-The suite includes a Playwright browser test of the UI, which skips itself if Chromium isn't installed.
+The suite includes:
+- a Playwright browser test of the UI, which skips itself if Chromium isn't installed
+- JS-vs-Python parity tests for the website, which skip themselves if Node isn't installed

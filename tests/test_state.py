@@ -49,7 +49,7 @@ def test_validate_events():
 
 def test_runtime_executes_tools_and_stops_at_terminal_action(tiny_tokenizer):
     call = Turn(Action.tool_call("scheduler.create", {"task": "check sales", "date": "2026-10-01", "time": "08:00"}), plan="p")
-    done = Turn(Action.finish("Reminder set."), verify="ok")
+    done = Turn(Action.finish("Reminder set: check sales on 2026-10-01 at 08:00."), verify="ok")
     rt = AgentRuntime(scripted_engine(tiny_tokenizer, [call, done]), REGISTRY)
     sb = Sandbox(NOW)
     res = rt.run(HEADER, [{"type": "user", "content": "Remind me tomorrow at 8 to check sales."}], sb.execute)

@@ -8,33 +8,33 @@
     "vocab_size": 4096,
     "tokenizer_fingerprint": "6b6a9b5f8ac402c8",
     "trained": true,
-    "train_steps": 2000,
+    "train_steps": 3000,
     "device": "cpu"
   },
   "decisions": {
     "mode": "raw",
     "decisions": 456,
-    "decision_accuracy": 89.91,
-    "structured_output_validity": 99.12,
-    "action_type_accuracy": 98.46,
-    "tool_selection_accuracy": 97.56,
-    "argument_exact_accuracy": 78.54,
-    "scheduling_exact_accuracy": 74.38,
+    "decision_accuracy": 90.79,
+    "structured_output_validity": 100.0,
+    "action_type_accuracy": 99.56,
+    "tool_selection_accuracy": 100.0,
+    "argument_exact_accuracy": 80.49,
+    "scheduling_exact_accuracy": 76.03,
     "ask_rate_on_ambiguous": 100.0,
     "false_completion_rate": 0.0,
-    "response_text_exact": 95.98,
+    "response_text_exact": 97.19,
     "counts": {
       "decisions": 456,
-      "valid": 452,
-      "type_ok": 449,
-      "correct": 410,
+      "valid": 456,
+      "type_ok": 454,
+      "correct": 414,
       "gold_tool_calls": 205,
-      "tool_ok": 200,
-      "args_ok": 161,
+      "tool_ok": 205,
+      "args_ok": 165,
       "sched": 121,
-      "sched_ok": 90,
+      "sched_ok": 92,
       "text_cmp": 249,
-      "text_exact": 239,
+      "text_exact": 242,
       "ambiguous": 45,
       "asked": 45,
       "after_error": 19,
@@ -42,31 +42,31 @@
     },
     "by_skill": {
       "intent": {
-        "accuracy": 90.12,
+        "accuracy": 92.59,
         "n": 324
       },
       "tool_selection": {
-        "accuracy": 78.89,
+        "accuracy": 82.22,
         "n": 180
       },
       "argument_generation": {
-        "accuracy": 75.15,
+        "accuracy": 76.92,
         "n": 169
       },
       "scheduling": {
-        "accuracy": 73.21,
+        "accuracy": 75.0,
         "n": 112
       },
       "multi_step": {
-        "accuracy": 83.33,
+        "accuracy": 73.33,
         "n": 30
       },
       "task_state": {
-        "accuracy": 83.87,
+        "accuracy": 75.81,
         "n": 62
       },
       "error_recovery": {
-        "accuracy": 91.18,
+        "accuracy": 94.12,
         "n": 34
       },
       "ambiguity": {
@@ -78,7 +78,7 @@
         "n": 169
       },
       "structured_output": {
-        "accuracy": 89.91,
+        "accuracy": 90.79,
         "n": 456
       }
     },
@@ -88,19 +88,19 @@
         "n": 49
       },
       "ambiguity_followup": {
-        "accuracy": 89.22,
+        "accuracy": 90.2,
         "n": 102
       },
       "chat": {
-        "accuracy": 90.0,
+        "accuracy": 86.67,
         "n": 30
       },
       "delete": {
-        "accuracy": 83.87,
+        "accuracy": 79.03,
         "n": 62
       },
       "file": {
-        "accuracy": 96.61,
+        "accuracy": 100.0,
         "n": 59
       },
       "file_error": {
@@ -108,50 +108,31 @@
         "n": 35
       },
       "list": {
-        "accuracy": 100.0,
+        "accuracy": 96.43,
         "n": 28
       },
       "note": {
-        "accuracy": 81.67,
+        "accuracy": 88.33,
         "n": 60
       },
       "out_of_scope": {
-        "accuracy": 94.74,
+        "accuracy": 100.0,
         "n": 19
       },
       "scheduling_one_time": {
-        "accuracy": 81.99,
+        "accuracy": 83.23,
         "n": 161
       },
       "scheduling_recurring": {
-        "accuracy": 93.33,
+        "accuracy": 94.44,
         "n": 90
       },
       "scheduling_relative": {
-        "accuracy": 97.18,
+        "accuracy": 98.59,
         "n": 71
       }
     },
     "failures": [
-      {
-        "episode": "train-777-1",
-        "turn": 1,
-        "gold": {
-          "type": "tool_call",
-          "tool": "notes.create",
-          "arguments": {
-            "text": "Sanjay will ship the blue mirror"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "notes.create",
-          "arguments": {
-            "text": "San will ship the blue mirror"
-          }
-        },
-        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"San will ship the blue mirror\"}}"
-      },
       {
         "episode": "train-777-2",
         "turn": 0,
@@ -168,12 +149,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-06-07",
+            "date": "2027-06-06",
             "task": "order new liners",
             "time": "13:00"
           }
         },
-        "raw": "<|plan|>Saturday is 2027-06-07. One-time reminder on 2027-06-07 at 13:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-06-07\",\"task\":\"order new liners\",\"time\":\"13:00\"}}"
+        "raw": "<|plan|>Saturday is 2027-06-06. One-time reminder on 2027-06-06 at 13:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-06-06\",\"task\":\"order new liners\",\"time\":\"13:00\"}}"
       },
       {
         "episode": "train-777-11",
@@ -214,12 +195,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-01-07",
+            "date": "2027-01-06",
             "task": "finish the homework",
             "time": "15:00"
           }
         },
-        "raw": "<|plan|>Tuesday is 2027-01-07. One-time reminder on 2027-01-07 at 15:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-01-07\",\"task\":\"finish the homework\",\"time\":\"15:00\"}}"
+        "raw": "<|plan|>Tuesday is 2027-01-06. One-time reminder on 2027-01-06 at 15:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-01-06\",\"task\":\"finish the homework\",\"time\":\"15:00\"}}"
       },
       {
         "episode": "train-777-17",
@@ -237,12 +218,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-12-11",
+            "date": "2027-12-12",
             "task": "send the pressure washer",
             "time": "16:00"
           }
         },
-        "raw": "<|plan|>Thursday is 2027-12-11. One-time reminder on 2027-12-11 at 16:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-12-11\",\"task\":\"send the pressure washer\",\"time\":\"16:00\"}}"
+        "raw": "<|plan|>Thursday is 2027-12-12. One-time reminder on 2027-12-12 at 16:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-12-12\",\"task\":\"send the pressure washer\",\"time\":\"16:00\"}}"
       },
       {
         "episode": "train-777-21",
@@ -258,30 +239,33 @@
           "type": "tool_call",
           "tool": "notes.create",
           "arguments": {
-            "text": "Pelren will visit on Friday"
+            "text": "Safel will visit on Friday"
           }
         },
-        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"Pelren will visit on Friday\"}}"
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"Safel will visit on Friday\"}}"
       },
       {
-        "episode": "train-777-29",
-        "turn": 0,
+        "episode": "train-777-22",
+        "turn": 1,
         "gold": {
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "task": "finish 96 coops",
-            "time": "05:10",
-            "repeat": {
-              "freq": "weekly",
-              "by_day": [
-                "MO"
-              ]
-            }
+            "task": "read the contract",
+            "date": "2026-07-09",
+            "time": "22:30"
           }
         },
-        "pred": null,
-        "raw": "<|plan|>Recurring reminder every Monday at 05:10.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"by_day\":[\"MO\"],\"freq\":\"weekly\"},\"task\":\"finish 96<|verify|>That time should ask instead of guessing.<|ask_user|>{\"question\":\"What time should I remind you?\"}"
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-07-08",
+            "task": "read the contract",
+            "time": "22:30"
+          }
+        },
+        "raw": "<|plan|>Thursday is 2026-07-08. One-time reminder on 2026-07-08 at 22:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-07-08\",\"task\":\"read the contract\",\"time\":\"22:30\"}}"
       },
       {
         "episode": "train-777-30",
@@ -299,35 +283,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-06-26",
-            "task": "cook 50 packages",
+            "date": "2027-06-28",
+            "task": "cook 50 eggs",
             "time": "14:00"
           }
         },
-        "raw": "<|plan|>Monday is 2027-06-26. One-time reminder on 2027-06-26 at 14:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-06-26\",\"task\":\"cook 50 packages\",\"time\":\"14:00\"}}"
-      },
-      {
-        "episode": "train-777-31",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "fix the quivi straw",
-            "date": "2027-05-06",
-            "time": "21:10"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-05-06",
-            "task": "fix the read straw",
-            "time": "21:10"
-          }
-        },
-        "raw": "<|plan|>Tomorrow is 2027-05-06. One-time reminder on 2027-05-06 at 21:10.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-05-06\",\"task\":\"fix the read straw\",\"time\":\"21:10\"}}"
+        "raw": "<|plan|>Monday is 2027-06-28. One-time reminder on 2027-06-28 at 14:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-06-28\",\"task\":\"cook 50 eggs\",\"time\":\"14:00\"}}"
       },
       {
         "episode": "train-777-40",
@@ -354,29 +315,6 @@
       },
       {
         "episode": "train-777-42",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "prepare for the exam",
-            "date": "2027-07-12",
-            "time": "09:05"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-07-19",
-            "task": "prepare for the exam",
-            "time": "09:05"
-          }
-        },
-        "raw": "<|plan|>Monday is 2027-07-19. One-time reminder on 2027-07-19 at 09:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-19\",\"task\":\"prepare for the exam\",\"time\":\"09:05\"}}"
-      },
-      {
-        "episode": "train-777-42",
         "turn": 3,
         "gold": {
           "type": "tool_call",
@@ -391,12 +329,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-07-19",
+            "date": "2027-07-12",
             "task": "Send the shop to Rohan",
             "time": "07:20"
           }
         },
-        "raw": "<|plan|>Sunday is 2027-07-19. One-time reminder on 2027-07-19 at 07:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-19\",\"task\":\"Send the shop to Rohan\",\"time\":\"07:20\"}}"
+        "raw": "<|plan|>Sunday is 2027-07-12. One-time reminder on 2027-07-12 at 07:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-12\",\"task\":\"Send the shop to Rohan\",\"time\":\"07:20\"}}"
       },
       {
         "episode": "train-777-47",
@@ -414,12 +352,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-10-02",
+            "date": "2027-10-27",
             "task": "collect 27 kg of rice",
             "time": "17:00"
           }
         },
-        "raw": "<|plan|>Friday is 2027-10-02. One-time reminder on 2027-10-02 at 17:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-10-02\",\"task\":\"collect 27 kg of rice\",\"time\":\"17:00\"}}"
+        "raw": "<|plan|>Friday is 2027-10-27. One-time reminder on 2027-10-27 at 17:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-10-27\",\"task\":\"collect 27 kg of rice\",\"time\":\"17:00\"}}"
       },
       {
         "episode": "train-777-49",
@@ -437,12 +375,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-07-14",
+            "date": "2027-07-13",
             "task": "meet Ravi",
             "time": "18:15"
           }
         },
-        "raw": "<|plan|>Saturday is 2027-07-14. One-time reminder on 2027-07-14 at 18:15.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-14\",\"task\":\"meet Ravi\",\"time\":\"18:15\"}}"
+        "raw": "<|plan|>Saturday is 2027-07-13. One-time reminder on 2027-07-13 at 18:15.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-13\",\"task\":\"meet Ravi\",\"time\":\"18:15\"}}"
       },
       {
         "episode": "train-777-52",
@@ -460,54 +398,31 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-08-26",
+            "date": "2027-08-28",
             "task": "call the plumber",
             "time": "15:00"
           }
         },
-        "raw": "<|plan|>Wednesday is 2027-08-26. One-time reminder on 2027-08-26 at 15:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-08-26\",\"task\":\"call the plumber\",\"time\":\"15:00\"}}"
+        "raw": "<|plan|>Wednesday is 2027-08-28. One-time reminder on 2027-08-28 at 15:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-08-28\",\"task\":\"call the plumber\",\"time\":\"15:00\"}}"
       },
       {
-        "episode": "train-777-56",
-        "turn": 2,
+        "episode": "train-777-53",
+        "turn": 1,
         "gold": {
           "type": "tool_call",
-          "tool": "notes.create",
+          "tool": "scheduler.delete",
           "arguments": {
-            "text": "Jatin needs 85 invoices"
+            "task_id": "r-3"
           }
         },
         "pred": {
           "type": "tool_call",
-          "tool": "notes.create",
+          "tool": "scheduler.delete",
           "arguments": {
-            "text": "Jaya needs 85 invoices"
+            "task_id": "r-2"
           }
         },
-        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"Jaya needs 85 invoices\"}}"
-      },
-      {
-        "episode": "train-777-60",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "call back Nupelti",
-            "date": "2026-02-02",
-            "time": "13:20"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2026-02-06",
-            "task": "call back Nupelti",
-            "time": "13:20"
-          }
-        },
-        "raw": "<|plan|>Monday is 2026-02-06. One-time reminder on 2026-02-06 at 13:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-02-06\",\"task\":\"call back Nupelti\",\"time\":\"13:20\"}}"
+        "raw": "<|verify|>'order printer ink' has task_id r-2.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-2\"}}"
       },
       {
         "episode": "train-777-61",
@@ -525,12 +440,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-05-27",
+            "date": "2027-06-27",
             "task": "renew the insurance",
             "time": "20:20"
           }
         },
-        "raw": "<|plan|>Wednesday is 2027-05-27. One-time reminder on 2027-05-27 at 20:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-05-27\",\"task\":\"renew the insurance\",\"time\":\"20:20\"}}"
+        "raw": "<|plan|>Wednesday is 2027-06-27. One-time reminder on 2027-06-27 at 20:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-06-27\",\"task\":\"renew the insurance\",\"time\":\"20:20\"}}"
       },
       {
         "episode": "train-777-65",
@@ -549,11 +464,34 @@
           "tool": "scheduler.create",
           "arguments": {
             "date": "2026-09-12",
-            "task": "stir 15 meet",
+            "task": "stir 15 cats",
             "time": "09:05"
           }
         },
-        "raw": "<|plan|>September 12 is 2026-09-12. One-time reminder on 2026-09-12 at 09:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-09-12\",\"task\":\"stir 15 meet\",\"time\":\"09:05\"}}"
+        "raw": "<|plan|>September 12 is 2026-09-12. One-time reminder on 2026-09-12 at 09:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-09-12\",\"task\":\"stir 15 cats\",\"time\":\"09:05\"}}"
+      },
+      {
+        "episode": "train-777-66",
+        "turn": 4,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "book 13 invitations",
+            "date": "2026-07-19",
+            "time": "19:30"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-07-15",
+            "task": "book 13 invitations",
+            "time": "19:30"
+          }
+        },
+        "raw": "<|plan|>Sunday is 2026-07-15. One-time reminder on 2026-07-15 at 19:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-07-15\",\"task\":\"book 13 invitations\",\"time\":\"19:30\"}}"
       },
       {
         "episode": "train-777-75",
@@ -566,23 +504,10 @@
           "type": "tool_call",
           "tool": "scheduler.delete",
           "arguments": {
-            "task_id": "r-1"
+            "task_id": "r-2"
           }
         },
-        "raw": "<|verify|>'call the transport company' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
-      },
-      {
-        "episode": "train-777-79",
-        "turn": 5,
-        "gold": {
-          "type": "tool_call",
-          "tool": "notes.create",
-          "arguments": {
-            "text": "Esha will stir the heavy budget"
-          }
-        },
-        "pred": null,
-        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"\"}}"
+        "raw": "<|verify|>'call the transport company' has task_id r-2.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-2\"}}"
       },
       {
         "episode": "train-777-82",
@@ -598,10 +523,10 @@
           "type": "tool_call",
           "tool": "scheduler.delete",
           "arguments": {
-            "task_id": "r-1"
+            "task_id": "r-2"
           }
         },
-        "raw": "<|verify|>'call Mr Sharma' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
+        "raw": "<|verify|>'call Mr Sharma' has task_id r-2.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-2\"}}"
       },
       {
         "episode": "train-777-85",
@@ -619,12 +544,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-04-15",
+            "date": "2027-04-12",
             "task": "review the invoices",
             "time": "22:05"
           }
         },
-        "raw": "<|plan|>Sunday is 2027-04-15. One-time reminder on 2027-04-15 at 22:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-04-15\",\"task\":\"review the invoices\",\"time\":\"22:05\"}}"
+        "raw": "<|plan|>Sunday is 2027-04-12. One-time reminder on 2027-04-12 at 22:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-04-12\",\"task\":\"review the invoices\",\"time\":\"22:05\"}}"
       },
       {
         "episode": "train-777-87",
@@ -642,25 +567,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-03-08",
+            "date": "2027-03-02",
             "task": "dig Maria",
             "time": "19:30"
           }
         },
-        "raw": "<|plan|>Wednesday is 2027-03-08. One-time reminder on 2027-03-08 at 19:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-03-08\",\"task\":\"dig Maria\",\"time\":\"19:30\"}}"
-      },
-      {
-        "episode": "train-777-95",
-        "turn": 1,
-        "gold": {
-          "type": "tool_call",
-          "tool": "notes.create",
-          "arguments": {
-            "text": "Arjun is on leave until Saturday"
-          }
-        },
-        "pred": null,
-        "raw": "<|verify|>Saving failed with a retryable error; retry once.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"\"}}"
+        "raw": "<|plan|>Wednesday is 2027-03-02. One-time reminder on 2027-03-02 at 19:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-03-02\",\"task\":\"dig Maria\",\"time\":\"19:30\"}}"
       },
       {
         "episode": "train-777-95",
@@ -678,12 +590,31 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-08-27",
+            "date": "2027-08-29",
             "task": "return the milk cans with Farhan",
             "time": "15:10"
           }
         },
-        "raw": "<|plan|>Saturday is 2027-08-27. One-time reminder on 2027-08-27 at 15:10.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-08-27\",\"task\":\"return the milk cans with Farhan\",\"time\":\"15:10\"}}"
+        "raw": "<|plan|>Saturday is 2027-08-29. One-time reminder on 2027-08-29 at 15:10.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-08-29\",\"task\":\"return the milk cans with Farhan\",\"time\":\"15:10\"}}"
+      },
+      {
+        "episode": "train-777-96",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-1"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-2"
+          }
+        },
+        "raw": "<|verify|>'repair the extra market for Safelti' has task_id r-2.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-2\"}}"
       },
       {
         "episode": "train-777-96",
@@ -720,8 +651,16 @@
             "time": "17:30"
           }
         },
-        "pred": null,
-        "raw": "<|verify|>The scheduler failed with a retryable error; retry once.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-10-31\",\"task\":\"call the is 2026-10-31 at the flag\",\"task\":\"call the_id r-1).<|finish|>{\"result\":\"Reminder set: budget thesew the flag on 2026-10-31 at 17:30.\"}"
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2026-10-31",
+            "task": "call the extramar flag",
+            "time": "17:30"
+          }
+        },
+        "raw": "<|verify|>The scheduler failed with a retryable error; retry once.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-10-31\",\"task\":\"call the extramar flag\",\"time\":\"17:30\"}}"
       },
       {
         "episode": "train-777-99",
@@ -763,11 +702,11 @@
           "tool": "scheduler.create",
           "arguments": {
             "date": "2026-12-06",
-            "task": "Tuesdayil",
+            "task": "M Ruru",
             "time": "13:00"
           }
         },
-        "raw": "<|plan|>December 6 is 2026-12-06. One-time reminder on 2026-12-06 at 13:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-12-06\",\"task\":\"Tuesdayil\",\"time\":\"13:00\"}}"
+        "raw": "<|plan|>December 6 is 2026-12-06. One-time reminder on 2026-12-06 at 13:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-12-06\",\"task\":\"M Ruru\",\"time\":\"13:00\"}}"
       },
       {
         "episode": "train-777-101",
@@ -783,10 +722,10 @@
           "type": "tool_call",
           "tool": "notes.create",
           "arguments": {
-            "text": "Pelren owes 4796 rupees for the handle"
+            "text": "Nufel owes 4796 rupees for the handle"
           }
         },
-        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"Pelren owes 4796 rupees for the handle\"}}"
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"Nufel owes 4796 rupees for the handle\"}}"
       },
       {
         "episode": "train-777-102",
@@ -802,33 +741,31 @@
           "type": "tool_call",
           "tool": "notes.create",
           "arguments": {
-            "text": "Pelfel needs 79 packages"
+            "text": "Nufelzo needs 79 timetables"
           }
         },
-        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"Pelfel needs 79 packages\"}}"
+        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"Nufelzo needs 79 timetables\"}}"
       },
       {
-        "episode": "train-777-111",
+        "episode": "train-777-105",
         "turn": 0,
         "gold": {
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "task": "stitch 18 posters",
-            "date": "2027-07-11",
-            "time": "19:30"
+            "task": "greet the saruqui report",
+            "time": "09:45"
           }
         },
         "pred": {
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-07-11",
-            "task": "stitch 18 plugs",
-            "time": "19:30"
+            "task": "greet the.csvqui report",
+            "time": "09:45"
           }
         },
-        "raw": "<|plan|>Today is 2027-07-11. One-time reminder on 2027-07-11 at 19:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-11\",\"task\":\"stitch 18 plugs\",\"time\":\"19:30\"}}"
+        "raw": "<|plan|>One-time reminder at the next 09:45.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"task\":\"greet the.csvqui report\",\"time\":\"09:45\"}}"
       },
       {
         "episode": "train-777-112",
@@ -846,12 +783,12 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-03-02",
+            "date": "2027-03-28",
             "task": "stitch Divya",
             "time": "14:40"
           }
         },
-        "raw": "<|plan|>Wednesday is 2027-03-02. One-time reminder on 2027-03-02 at 14:40.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-03-02\",\"task\":\"stitch Divya\",\"time\":\"14:40\"}}"
+        "raw": "<|plan|>Wednesday is 2027-03-28. One-time reminder on 2027-03-28 at 14:40.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-03-28\",\"task\":\"stitch Divya\",\"time\":\"14:40\"}}"
       },
       {
         "episode": "train-777-116",
@@ -916,25 +853,6 @@
         "raw": "<|plan|>Thursday is 2026-06-27. One-time reminder on 2026-06-27 at 17:40.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-06-27\",\"task\":\"trade the pension for Gaurav\",\"time\":\"17:40\"}}"
       },
       {
-        "episode": "train-777-125",
-        "turn": 3,
-        "gold": {
-          "type": "tool_call",
-          "tool": "notes.create",
-          "arguments": {
-            "text": "Green Mart pays on the 5th"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "notes.create",
-          "arguments": {
-            "text": "Green Mart pays on the the the5th"
-          }
-        },
-        "raw": "<|plan|>Save a note.<|tool_call|>{\"tool\":\"notes.create\",\"arguments\":{\"text\":\"Green Mart pays on the the the5th\"}}"
-      },
-      {
         "episode": "train-777-127",
         "turn": 2,
         "gold": {
@@ -950,12 +868,31 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2026-02-19",
+            "date": "2026-02-22",
             "task": "revise chemistry",
             "time": "05:05"
           }
         },
-        "raw": "<|plan|>Saturday is 2026-02-19. One-time reminder on 2026-02-19 at 05:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-02-19\",\"task\":\"revise chemistry\",\"time\":\"05:05\"}}"
+        "raw": "<|plan|>Saturday is 2026-02-22. One-time reminder on 2026-02-22 at 05:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-02-22\",\"task\":\"revise chemistry\",\"time\":\"05:05\"}}"
+      },
+      {
+        "episode": "train-777-128",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-1"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-2"
+          }
+        },
+        "raw": "<|verify|>'review the invoices' has task_id r-2.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-2\"}}"
       },
       {
         "episode": "train-777-129",
@@ -973,39 +910,123 @@
           "type": "tool_call",
           "tool": "scheduler.create",
           "arguments": {
-            "date": "2027-12-09",
+            "date": "2027-12-10",
             "task": "send the price list to Kavya",
             "time": "14:30"
           }
         },
-        "raw": "<|plan|>Tuesday is 2027-12-09. One-time reminder on 2027-12-09 at 14:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-12-09\",\"task\":\"send the price list to Kavya\",\"time\":\"14:30\"}}"
+        "raw": "<|plan|>Tuesday is 2027-12-10. One-time reminder on 2027-12-10 at 14:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-12-10\",\"task\":\"send the price list to Kavya\",\"time\":\"14:30\"}}"
+      },
+      {
+        "episode": "train-777-133",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "collect the lab report",
+            "date": "2027-07-04",
+            "time": "14:20"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-07-05",
+            "task": "collect the lab report",
+            "time": "14:20"
+          }
+        },
+        "raw": "<|plan|>Sunday is 2027-07-05. One-time reminder on 2027-07-05 at 14:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-05\",\"task\":\"collect the lab report\",\"time\":\"14:20\"}}"
+      },
+      {
+        "episode": "train-777-143",
+        "turn": 0,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "task": "unpack Raghav",
+            "date": "2027-06-01",
+            "time": "12:30"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.create",
+          "arguments": {
+            "date": "2027-05-28",
+            "task": "unpack Raghav",
+            "time": "12:30"
+          }
+        },
+        "raw": "<|plan|>Tuesday is 2027-05-28. One-time reminder on 2027-05-28 at 12:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-05-28\",\"task\":\"unpack Raghav\",\"time\":\"12:30\"}}"
+      },
+      {
+        "episode": "train-777-144",
+        "turn": 3,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-1"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-2"
+          }
+        },
+        "raw": "<|verify|>'rake the red mouse for Aditi' has task_id r-2.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-2\"}}"
+      },
+      {
+        "episode": "train-777-149",
+        "turn": 1,
+        "gold": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-1"
+          }
+        },
+        "pred": {
+          "type": "tool_call",
+          "tool": "scheduler.delete",
+          "arguments": {
+            "task_id": "r-2"
+          }
+        },
+        "raw": "<|verify|>'pack 77 letters' has task_id r-2.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-2\"}}"
       }
     ]
   },
   "decisions_system": {
     "mode": "system",
     "decisions": 456,
-    "decision_accuracy": 93.86,
+    "decision_accuracy": 99.34,
     "structured_output_validity": 100.0,
-    "action_type_accuracy": 99.34,
+    "action_type_accuracy": 99.56,
     "tool_selection_accuracy": 99.51,
-    "argument_exact_accuracy": 87.32,
-    "scheduling_exact_accuracy": 80.99,
+    "argument_exact_accuracy": 99.02,
+    "scheduling_exact_accuracy": 99.17,
     "ask_rate_on_ambiguous": 100.0,
     "false_completion_rate": 0.0,
-    "response_text_exact": 96.39,
+    "response_text_exact": 99.6,
     "counts": {
       "decisions": 456,
       "valid": 456,
-      "type_ok": 453,
-      "correct": 428,
+      "type_ok": 454,
+      "correct": 453,
       "gold_tool_calls": 205,
       "tool_ok": 204,
-      "args_ok": 179,
+      "args_ok": 203,
       "sched": 121,
-      "sched_ok": 98,
-      "text_cmp": 249,
-      "text_exact": 240,
+      "sched_ok": 120,
+      "text_cmp": 250,
+      "text_exact": 249,
       "ambiguous": 45,
       "asked": 45,
       "after_error": 19,
@@ -1013,27 +1034,27 @@
     },
     "by_skill": {
       "intent": {
-        "accuracy": 94.44,
+        "accuracy": 99.69,
         "n": 324
       },
       "tool_selection": {
-        "accuracy": 87.22,
+        "accuracy": 99.44,
         "n": 180
       },
       "argument_generation": {
-        "accuracy": 84.62,
+        "accuracy": 98.82,
         "n": 169
       },
       "scheduling": {
-        "accuracy": 79.46,
+        "accuracy": 99.11,
         "n": 112
       },
       "multi_step": {
-        "accuracy": 83.33,
+        "accuracy": 93.33,
         "n": 30
       },
       "task_state": {
-        "accuracy": 87.1,
+        "accuracy": 98.39,
         "n": 62
       },
       "error_recovery": {
@@ -1045,11 +1066,11 @@
         "n": 45
       },
       "completion_verification": {
-        "accuracy": 98.82,
+        "accuracy": 99.41,
         "n": 169
       },
       "structured_output": {
-        "accuracy": 93.86,
+        "accuracy": 99.34,
         "n": 456
       }
     },
@@ -1059,15 +1080,15 @@
         "n": 49
       },
       "ambiguity_followup": {
-        "accuracy": 93.14,
+        "accuracy": 100.0,
         "n": 102
       },
       "chat": {
-        "accuracy": 96.67,
+        "accuracy": 100.0,
         "n": 30
       },
       "delete": {
-        "accuracy": 90.32,
+        "accuracy": 96.77,
         "n": 62
       },
       "file": {
@@ -1075,7 +1096,7 @@
         "n": 59
       },
       "file_error": {
-        "accuracy": 97.14,
+        "accuracy": 100.0,
         "n": 35
       },
       "list": {
@@ -1083,7 +1104,7 @@
         "n": 28
       },
       "note": {
-        "accuracy": 98.33,
+        "accuracy": 100.0,
         "n": 60
       },
       "out_of_scope": {
@@ -1091,134 +1112,19 @@
         "n": 19
       },
       "scheduling_one_time": {
-        "accuracy": 86.96,
+        "accuracy": 100.0,
         "n": 161
       },
       "scheduling_recurring": {
-        "accuracy": 94.44,
+        "accuracy": 98.89,
         "n": 90
       },
       "scheduling_relative": {
-        "accuracy": 98.59,
+        "accuracy": 100.0,
         "n": 71
       }
     },
     "failures": [
-      {
-        "episode": "train-777-2",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "order new liners",
-            "date": "2027-06-05",
-            "time": "13:00"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-06-07",
-            "task": "order new liners",
-            "time": "13:00"
-          }
-        },
-        "raw": "<|plan|>Saturday is 2027-06-07. One-time reminder on 2027-06-07 at 13:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-06-07\",\"task\":\"order new liners\",\"time\":\"13:00\"}}"
-      },
-      {
-        "episode": "train-777-11",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "glue the box and the coffee",
-            "date": "2026-12-25",
-            "time": "14:30"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2026-12-27",
-            "task": "glue the box and the coffee",
-            "time": "14:30"
-          }
-        },
-        "raw": "<|plan|>Friday is 2026-12-27. One-time reminder on 2026-12-27 at 14:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-12-27\",\"task\":\"glue the box and the coffee\",\"time\":\"14:30\"}}"
-      },
-      {
-        "episode": "train-777-15",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "finish the homework",
-            "date": "2027-01-05",
-            "time": "15:00"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-01-07",
-            "task": "finish the homework",
-            "time": "15:00"
-          }
-        },
-        "raw": "<|plan|>Tuesday is 2027-01-07. One-time reminder on 2027-01-07 at 15:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-01-07\",\"task\":\"finish the homework\",\"time\":\"15:00\"}}"
-      },
-      {
-        "episode": "train-777-17",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "send the pressure washer",
-            "date": "2027-12-16",
-            "time": "16:00"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-12-11",
-            "task": "send the pressure washer",
-            "time": "16:00"
-          }
-        },
-        "raw": "<|plan|>Thursday is 2027-12-11. One-time reminder on 2027-12-11 at 16:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-12-11\",\"task\":\"send the pressure washer\",\"time\":\"16:00\"}}"
-      },
-      {
-        "episode": "train-777-30",
-        "turn": 1,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "cook 50 timetables",
-            "date": "2027-06-28",
-            "time": "14:00"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-06-26",
-            "task": "cook 50 timetables",
-            "time": "14:00"
-          }
-        },
-        "raw": "<|plan|>Monday is 2027-06-26. One-time reminder on 2027-06-26 at 14:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-06-26\",\"task\":\"cook 50 timetables\",\"time\":\"14:00\"}}"
-      },
       {
         "episode": "train-777-39",
         "turn": 0,
@@ -1253,317 +1159,6 @@
         "raw": "<|plan|>Recurring reminder on the 10th of every month at 22:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"repeat\":{\"by_month_day\":[10],\"freq\":\"monthly\"},\"task\":\"write the\",\"time\":\"22:00\"}}"
       },
       {
-        "episode": "train-777-40",
-        "turn": 2,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "call the battery at the pencil",
-            "date": "2027-07-30",
-            "time": "07:30"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-07-28",
-            "task": "call the battery at the pencil",
-            "time": "07:30"
-          }
-        },
-        "raw": "<|plan|>Friday is 2027-07-28. One-time reminder on 2027-07-28 at 07:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-28\",\"task\":\"call the battery at the pencil\",\"time\":\"07:30\"}}"
-      },
-      {
-        "episode": "train-777-42",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "prepare for the exam",
-            "date": "2027-07-12",
-            "time": "09:05"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-07-11",
-            "task": "prepare for the exam",
-            "time": "09:05"
-          }
-        },
-        "raw": "<|plan|>Monday is 2027-07-19. One-time reminder on 2027-07-19 at 09:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-11\",\"task\":\"prepare for the exam\",\"time\":\"09:05\"}}"
-      },
-      {
-        "episode": "train-777-47",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "collect 27 kg of rice",
-            "date": "2027-10-29",
-            "time": "17:00"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-10-30",
-            "task": "collect 27 kg of rice",
-            "time": "17:00"
-          }
-        },
-        "raw": "<|plan|>Friday is 2027-10-02. One-time reminder on 2027-10-02 at 17:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-10-30\",\"task\":\"collect 27 kg of rice\",\"time\":\"17:00\"}}"
-      },
-      {
-        "episode": "train-777-49",
-        "turn": 1,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "meet Ravi",
-            "date": "2027-07-10",
-            "time": "18:15"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-07-14",
-            "task": "meet Ravi",
-            "time": "18:15"
-          }
-        },
-        "raw": "<|plan|>Saturday is 2027-07-14. One-time reminder on 2027-07-14 at 18:15.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-14\",\"task\":\"meet Ravi\",\"time\":\"18:15\"}}"
-      },
-      {
-        "episode": "train-777-52",
-        "turn": 3,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "call the plumber",
-            "date": "2027-09-01",
-            "time": "15:00"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-08-26",
-            "task": "call the plumber",
-            "time": "15:00"
-          }
-        },
-        "raw": "<|plan|>Wednesday is 2027-08-26. One-time reminder on 2027-08-26 at 15:00.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-08-26\",\"task\":\"call the plumber\",\"time\":\"15:00\"}}"
-      },
-      {
-        "episode": "train-777-60",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "call back Nupelti",
-            "date": "2026-02-02",
-            "time": "13:20"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2026-02-06",
-            "task": "call back Nupelti",
-            "time": "13:20"
-          }
-        },
-        "raw": "<|plan|>Monday is 2026-02-06. One-time reminder on 2026-02-06 at 13:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-02-06\",\"task\":\"call back Nupelti\",\"time\":\"13:20\"}}"
-      },
-      {
-        "episode": "train-777-61",
-        "turn": 1,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "renew the insurance",
-            "date": "2027-06-02",
-            "time": "20:20"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-05-27",
-            "task": "renew the insurance",
-            "time": "20:20"
-          }
-        },
-        "raw": "<|plan|>Wednesday is 2027-05-27. One-time reminder on 2027-05-27 at 20:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-05-27\",\"task\":\"renew the insurance\",\"time\":\"20:20\"}}"
-      },
-      {
-        "episode": "train-777-75",
-        "turn": 4,
-        "gold": {
-          "type": "fail",
-          "error": "I couldn't find a reminder to call the transport company."
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.delete",
-          "arguments": {
-            "task_id": "r-1"
-          }
-        },
-        "raw": "<|verify|>'call the transport company' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
-      },
-      {
-        "episode": "train-777-82",
-        "turn": 1,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.delete",
-          "arguments": {
-            "task_id": "r-3"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.delete",
-          "arguments": {
-            "task_id": "r-1"
-          }
-        },
-        "raw": "<|verify|>'call Mr Sharma' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
-      },
-      {
-        "episode": "train-777-85",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "review the invoices",
-            "date": "2027-04-18",
-            "time": "22:05"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-04-15",
-            "task": "review the invoices",
-            "time": "22:05"
-          }
-        },
-        "raw": "<|plan|>Sunday is 2027-04-15. One-time reminder on 2027-04-15 at 22:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-04-15\",\"task\":\"review the invoices\",\"time\":\"22:05\"}}"
-      },
-      {
-        "episode": "train-777-87",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "dig Maria",
-            "date": "2027-03-31",
-            "time": "19:30"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-03-30",
-            "task": "dig Maria",
-            "time": "19:30"
-          }
-        },
-        "raw": "<|plan|>Wednesday is 2027-03-08. One-time reminder on 2027-03-08 at 19:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-03-30\",\"task\":\"dig Maria\",\"time\":\"19:30\"}}"
-      },
-      {
-        "episode": "train-777-95",
-        "turn": 4,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "return the milk cans with Farhan",
-            "date": "2027-08-28",
-            "time": "15:10"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-08-27",
-            "task": "return the milk cans with Farhan",
-            "time": "15:10"
-          }
-        },
-        "raw": "<|plan|>Saturday is 2027-08-27. One-time reminder on 2027-08-27 at 15:10.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-08-27\",\"task\":\"return the milk cans with Farhan\",\"time\":\"15:10\"}}"
-      },
-      {
-        "episode": "train-777-112",
-        "turn": 3,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "stitch Divya",
-            "date": "2027-03-31",
-            "time": "14:40"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-03-30",
-            "task": "stitch Divya",
-            "time": "14:40"
-          }
-        },
-        "raw": "<|plan|>Wednesday is 2027-03-02. One-time reminder on 2027-03-02 at 14:40.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-03-30\",\"task\":\"stitch Divya\",\"time\":\"14:40\"}}"
-      },
-      {
-        "episode": "train-777-116",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "pay the rent",
-            "date": "2026-04-18",
-            "time": "21:45"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2026-04-12",
-            "task": "pay the rent",
-            "time": "21:45"
-          }
-        },
-        "raw": "<|plan|>Saturday is 2026-04-12. One-time reminder on 2026-04-12 at 21:45.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-04-12\",\"task\":\"pay the rent\",\"time\":\"21:45\"}}"
-      },
-      {
         "episode": "train-777-123",
         "turn": 1,
         "gold": {
@@ -1580,118 +1175,7 @@
         "raw": "<|verify|>'collect 51 bottles of ghee' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
       },
       {
-        "episode": "train-777-124",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "trade the pension for Gaurav",
-            "date": "2026-06-25",
-            "time": "17:40"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2026-06-27",
-            "task": "trade the pension for Gaurav",
-            "time": "17:40"
-          }
-        },
-        "raw": "<|plan|>Thursday is 2026-06-27. One-time reminder on 2026-06-27 at 17:40.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-06-27\",\"task\":\"trade the pension for Gaurav\",\"time\":\"17:40\"}}"
-      },
-      {
-        "episode": "train-777-127",
-        "turn": 2,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "revise chemistry",
-            "date": "2026-02-21",
-            "time": "05:05"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2026-02-19",
-            "task": "revise chemistry",
-            "time": "05:05"
-          }
-        },
-        "raw": "<|plan|>Saturday is 2026-02-19. One-time reminder on 2026-02-19 at 05:05.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2026-02-19\",\"task\":\"revise chemistry\",\"time\":\"05:05\"}}"
-      },
-      {
-        "episode": "train-777-129",
-        "turn": 5,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "send the price list to Kavya",
-            "date": "2027-12-07",
-            "time": "14:30"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-12-09",
-            "task": "send the price list to Kavya",
-            "time": "14:30"
-          }
-        },
-        "raw": "<|plan|>Tuesday is 2027-12-09. One-time reminder on 2027-12-09 at 14:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-12-09\",\"task\":\"send the price list to Kavya\",\"time\":\"14:30\"}}"
-      },
-      {
-        "episode": "train-777-133",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "collect the lab report",
-            "date": "2027-07-04",
-            "time": "14:20"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-07-07",
-            "task": "collect the lab report",
-            "time": "14:20"
-          }
-        },
-        "raw": "<|plan|>Sunday is 2027-07-07. One-time reminder on 2027-07-07 at 14:20.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-07-07\",\"task\":\"collect the lab report\",\"time\":\"14:20\"}}"
-      },
-      {
-        "episode": "train-777-135",
-        "turn": 1,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.delete",
-          "arguments": {
-            "task_id": "r-2"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.delete",
-          "arguments": {
-            "task_id": "r-1"
-          }
-        },
-        "raw": "<|verify|>'grease 50 scarfs' has task_id r-1.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-1\"}}"
-      },
-      {
-        "episode": "train-777-141",
+        "episode": "train-777-128",
         "turn": 1,
         "gold": {
           "type": "tool_call",
@@ -1702,40 +1186,17 @@
         },
         "pred": {
           "type": "fail",
-          "error": "I couldn't find a reminder to record the milk yield."
+          "error": "I couldn't find a reminder that matches what you asked, so I didn't delete anything."
         },
-        "raw": "<|verify|>No reminder matches 'record the milk yield'.<|fail|>{\"error\":\"I couldn't find a reminder to record the milk yield.\"}"
-      },
-      {
-        "episode": "train-777-143",
-        "turn": 0,
-        "gold": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "task": "unpack Raghav",
-            "date": "2027-06-01",
-            "time": "12:30"
-          }
-        },
-        "pred": {
-          "type": "tool_call",
-          "tool": "scheduler.create",
-          "arguments": {
-            "date": "2027-05-28",
-            "task": "unpack Raghav",
-            "time": "12:30"
-          }
-        },
-        "raw": "<|plan|>Tuesday is 2027-05-28. One-time reminder on 2027-05-28 at 12:30.<|tool_call|>{\"tool\":\"scheduler.create\",\"arguments\":{\"date\":\"2027-05-28\",\"task\":\"unpack Raghav\",\"time\":\"12:30\"}}"
+        "raw": "<|verify|>'review the invoices' has task_id r-2.<|tool_call|>{\"tool\":\"scheduler.delete\",\"arguments\":{\"task_id\":\"r-2\"}}"
       }
     ]
   },
   "end_to_end": {
     "episodes": 150,
-    "task_success_rate": 88.0,
+    "task_success_rate": 98.0,
     "final_action_type_accuracy": 98.67,
-    "state_correct_rate": 88.0,
+    "state_correct_rate": 98.0,
     "guard_interventions": 0,
     "episodes_with_invalid_output": 0,
     "by_category": {
@@ -1752,7 +1213,7 @@
         "n": 10
       },
       "delete": {
-        "success": 63.64,
+        "success": 81.82,
         "n": 11
       },
       "file": {
@@ -1776,7 +1237,7 @@
         "n": 6
       },
       "scheduling_one_time": {
-        "success": 59.38,
+        "success": 100.0,
         "n": 32
       },
       "scheduling_recurring": {
@@ -1790,54 +1251,6 @@
     },
     "failures": [
       {
-        "episode": "train-777-2",
-        "user": "Create a reminder for next Saturday at 13:00: order new liners.",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: order new liners on 2027-06-05 at 13:00."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: order new liners on 2027-06-07 at 13:00."
-        }
-      },
-      {
-        "episode": "train-777-11",
-        "user": "remind me on friday at 2:30 PM to glue the box and the coffee",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: glue the box and the coffee on 2026-12-25 at 14:30."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: glue the box and the coffee on 2026-12-27 at 14:30."
-        }
-      },
-      {
-        "episode": "train-777-15",
-        "user": "Remind me to finish the homework at 3 in the afternoon on tuesday.",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: finish the homework on 2027-01-05 at 15:00."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: finish the homework on 2027-01-07 at 15:00."
-        }
-      },
-      {
-        "episode": "train-777-17",
-        "user": "Reminder on thursday 4 in the afternoon send the pressure washer",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: send the pressure washer on 2027-12-16 at 16:00."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: send the pressure washer on 2027-12-11 at 16:00."
-        }
-      },
-      {
         "episode": "train-777-39",
         "user": "Remind me to write the monthly report on the 10th of every month at 10pm.",
         "gold": {
@@ -1846,91 +1259,7 @@
         },
         "pred": {
           "type": "finish",
-          "result": "Reminder set: write the monthly report on 2026-08-10 at 22:00, repeating on the 10th of every month."
-        }
-      },
-      {
-        "episode": "train-777-42",
-        "user": "Add a reminder on monday at 09:05 to prepare for the exam.",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: prepare for the exam on 2027-07-12 at 09:05."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: prepare for the exam on 2027-07-11 at 09:05."
-        }
-      },
-      {
-        "episode": "train-777-47",
-        "user": "Please remind me to collect 27 kg of rice at 5 pm this Friday.",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: collect 27 kg of rice on 2027-10-29 at 17:00."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: collect 27 kg of rice on 2027-10-30 at 17:00."
-        }
-      },
-      {
-        "episode": "train-777-60",
-        "user": "Could you set a reminder to call back Nupelti this Monday at 13:20?",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: call back Nupelti on 2026-02-02 at 13:20."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: call back Nupelti on 2026-02-06 at 13:20."
-        }
-      },
-      {
-        "episode": "train-777-82",
-        "user": "Delete the reminder to call Mr Sharma.",
-        "gold": {
-          "type": "finish",
-          "result": "Deleted the reminder: call Mr Sharma."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Deleted the reminder: text the chilli at the uncle."
-        }
-      },
-      {
-        "episode": "train-777-85",
-        "user": "Could you set a reminder to review the invoices next Sunday at 10:05pm?",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: review the invoices on 2027-04-18 at 22:05."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: review the invoices on 2027-04-15 at 22:05."
-        }
-      },
-      {
-        "episode": "train-777-87",
-        "user": "I need to dig Maria this Wednesday at 7:30pm. Remind me.",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: dig Maria on 2027-03-31 at 19:30."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: dig Maria on 2027-03-30 at 19:30."
-        }
-      },
-      {
-        "episode": "train-777-116",
-        "user": "Remind me on Saturday at 9:45 pm to pay the rent.",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: pay the rent on 2026-04-18 at 21:45."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: pay the rent on 2026-04-12 at 21:45."
+          "result": "Reminder set: write the on 2026-08-10 at 22:00, repeating on the 10th of every month."
         }
       },
       {
@@ -1946,66 +1275,18 @@
         }
       },
       {
-        "episode": "train-777-124",
-        "user": "Remind me to trade the pension for Gaurav at 5:40 PM this Thursday.",
+        "episode": "train-777-128",
+        "user": "Remove the reminder about review the invoices.",
         "gold": {
           "type": "finish",
-          "result": "Reminder set: trade the pension for Gaurav on 2026-06-25 at 17:40."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: trade the pension for Gaurav on 2026-06-27 at 17:40."
-        }
-      },
-      {
-        "episode": "train-777-133",
-        "user": "Reminder on Sunday 2:20 PM collect the lab report",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: collect the lab report on 2027-07-04 at 14:20."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: collect the lab report on 2027-07-07 at 14:20."
-        }
-      },
-      {
-        "episode": "train-777-135",
-        "user": "Remove the reminder about translate 50 batterys.",
-        "gold": {
-          "type": "finish",
-          "result": "Deleted the reminder: translate 50 batterys."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Deleted the reminder: thank Manoj."
-        }
-      },
-      {
-        "episode": "train-777-141",
-        "user": "Remove the reminder about record the milk yield.",
-        "gold": {
-          "type": "finish",
-          "result": "Deleted the reminder: record the milk yield."
+          "result": "Deleted the reminder: review the invoices."
         },
         "pred": {
           "type": "fail",
-          "error": "I couldn't find a reminder to record the milk yield."
-        }
-      },
-      {
-        "episode": "train-777-143",
-        "user": "Set up a reminder on tuesday at 12:30 pm: unpack Raghav.",
-        "gold": {
-          "type": "finish",
-          "result": "Reminder set: unpack Raghav on 2027-06-01 at 12:30."
-        },
-        "pred": {
-          "type": "finish",
-          "result": "Reminder set: unpack Raghav on 2027-05-28 at 12:30."
+          "error": "I couldn't find a reminder that matches what you asked, so I didn't delete anything."
         }
       }
     ]
   },
-  "seconds": 147.6
+  "seconds": 294.6
 }

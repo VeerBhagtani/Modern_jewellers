@@ -272,3 +272,87 @@ def test_dates_follow_the_words_of_the_request(tiny_tokenizer):
     assert CopyConstraint(tiny_tokenizer, evs, build_context(NOW)).dates == ["2026-09-30", "2026-10-01"]
     no_day = [{"type": "user", "content": "Remind me at 5 to call mom."}]
     assert len(CopyConstraint(tiny_tokenizer, no_day, build_context(NOW)).dates) == 8  # whole calendar (today + 7 days)
+
+
+def _listed(*tasks):
+    rems = [{"task_id": f"r-{i + 1}", "task": t, "next_run": "2026-10-05T09:00"} for i, t in enumerate(tasks)]
+    return [{"type": "arouse", "turn": {"action": {"type": "tool_call", "tool": "scheduler.list", "arguments": {}}}},
+            {"type": "tool_result", "content": {"success": True, "count": len(rems), "reminders": rems}}]
+
+
+def test_delete_must_target_the_named_reminder():
+    from arouse.agent.grounding import delete_issue
+
+    evs = [{"type": "user", "content": "Please drop the call the vet reminder."}] + _listed("call the accountant", "call the vet")
+    assert delete_issue("r-2", evs) is None
+    assert delete_issue("r-1", evs) is not None  # "call" matches, but "call the vet" matches better
+    assert delete_issue("r-9", evs) is not None  # not listed
+    other = [{"type": "user", "content": "I no longer need the reminder to order spare pump parts."}] + _listed("defrost the freezer")
+    assert delete_issue("r-1", other) is not None  # nothing the user said matches
+    earlier = [{"type": "user", "content": "Remind me tomorrow at 8 to check sales."},
+               {"type": "arouse", "turn": {"action": {"type": "finish", "result": "Reminder set."}}},
+               {"type": "user", "content": "Actually cancel that."}] + _listed("check sales", "pay rent")
+    assert delete_issue("r-1", earlier) is None and delete_issue("r-2", earlier) is not None  # "that" = the earlier request
+
+
+def test_runtime_never_deletes_an_unnamed_reminder(tiny_tokenizer):
+    from datetime import datetime as dt
+
+    from arouse.agent.tools import Reminder
+
+    wrong = Turn(Action.tool_call("scheduler.delete", {"task_id": "r-1"}))
+    eng = scripted_engine(tiny_tokenizer, [Turn(Action.tool_call("scheduler.list", {}))] + [wrong] * 7)
+    sb = Sandbox(NOW, reminders=[Reminder("r-1", "defrost the freezer", dt(2026, 10, 3, 9, 0))])
+    res = AgentRuntime(eng, REGISTRY, constrain_copy=False).run(
+        HEADER, [{"type": "user", "content": "Delete my reminder to order spare pump parts."}], sb.execute)
+    assert res.final.type == "fail" and len(sb.snapshot()["reminders"]) == 1
+
+
+def test_notes_are_copied_to_the_end_of_the_sentence(tiny_tokenizer):
+    evs = [{"type": "user", "content": "Please jot down: the market is closed on Sunday, thanks"}]
+    cc = CopyConstraint(tiny_tokenizer, evs, build_context(NOW))
+    assert not cc.complete("text", "the market is closed")
+    assert cc.complete("text", "the market is closed on Sunday")
+    price = [{"type": "user", "content": "Note that milk is 4.50 per litre now."}]
+    cc = CopyConstraint(tiny_tokenizer, price, build_context(NOW))
+    assert "milk is 4.50 per litre now" in [("milk" + c) for c in cc.continuations("text", "milk")]
+
+
+def test_labelled_note_is_the_content_after_the_label(tiny_tokenizer):
+    from arouse.agent.constraints import label_end
+
+    assert label_end("Please jot down: the pump makes a strange noise.") == len("Please jot down: ")
+    assert label_end("Note that the meeting is at 10:30.") is None  # no "label: " (10:30 is a time)
+    evs = [{"type": "user", "content": "Remember this note: the pump makes a strange noise."}]
+    cc = CopyConstraint(tiny_tokenizer, evs, build_context(NOW))
+    assert cc.continuations("text", "") == ["the pump makes a strange noise"]
+    assert not cc.complete("text", "Remember this note: the pump makes a strange noise")
+    assert not cc.complete("text", "a strange noise") and cc.complete("text", "the pump makes a strange noise")
+
+
+def test_confirmation_must_state_the_tool_result(tiny_tokenizer):
+    from arouse.agent.answers import corrected_confirmation
+
+    garbled = Turn(Action.finish("Reminder set: water the your files on 2026-10-01 at 08:00."))
+    res = AgentRuntime(scripted_engine(tiny_tokenizer, [CREATE, garbled]), REGISTRY, constrain_copy=False).run(
+        HEADER, ASK, Sandbox(NOW).execute)
+    assert res.final.result == "Reminder set: water the plants on 2026-10-01 at 08:00." and res.turns[-1].rewritten
+    raw = AgentRuntime(scripted_engine(tiny_tokenizer, [CREATE, garbled]), REGISTRY, retries=0, constrain_copy=False).run(
+        HEADER, ASK, Sandbox(NOW).execute)
+    assert raw.final == garbled.action  # raw mode reports the model's own text
+    lines = [{"type": "user", "content": "How many lines are in a.csv?"},
+             {"type": "arouse", "turn": {"action": {"type": "tool_call", "tool": "file.read", "arguments": {"path": "a.csv"}}}},
+             {"type": "tool_result", "content": {"success": True, "path": "a.csv", "lines": 3, "preview": "x,y\n1,2"}}]
+    assert corrected_confirmation(Action.finish("a.csv has 3 lines."), lines) is None
+    assert corrected_confirmation(Action.finish("a.csv has 4 lines."), lines) == "a.csv has 3 lines. It starts with: x,y"
+    assert corrected_confirmation(Action.fail("x"), lines) is None
+
+
+def test_not_found_claims_must_agree_with_the_tools():
+    from arouse.agent.grounding import answer_issue
+
+    evs = [{"type": "user", "content": "Cancel my reminder to check sales."}] + _listed("feed the calves", "check sales")
+    assert answer_issue(Action.fail("I couldn't find a reminder to check sales."), evs) is not None  # it was listed
+    other = [{"type": "user", "content": "Delete my reminder to order spare pump parts."}] + _listed("check sales")
+    assert answer_issue(Action.fail("I couldn't find a reminder to order spare pump parts."), other) is None
+    assert answer_issue(Action.fail("I couldn't find a reminder to order the pump."), other) is not None  # not the user's words
