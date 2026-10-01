@@ -3,6 +3,7 @@ about
 again
 am
 and
+anything
 arouse
 assistant
 at
@@ -18,12 +19,15 @@ day
 days
 did
 do
+doing
+else
 every
 example
 files
 find
 for
 friday
+goodbye
 has
 have
 hello
@@ -67,6 +71,7 @@ starts
 sunday
 take
 task
+thanks
 that
 the
 them
@@ -82,6 +87,7 @@ wednesday
 weekday
 weekend
 welcome
+well
 what
 when
 which

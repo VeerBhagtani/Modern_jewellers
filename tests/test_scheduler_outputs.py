@@ -7,6 +7,7 @@ import pytest
 from arouse.agent.context import build_context, next_weekday_date, upcoming
 from arouse.agent.episode import turn_from_event
 from arouse.agent.synth import Q_TIME, Q_WHEN, Generator, episode_sandbox, generate, rule_words, say_time
+from tests.conftest import ROOT as ROOT_DIR
 
 EPISODES = generate(1500, seed=5) + generate(300, seed=6, split="test")
 
@@ -73,7 +74,7 @@ def test_every_gold_create_is_valid_and_consistent():
                 if f" {full} " in u:
                     assert args["date"] == ctx[full.lower()], u
         if "in_minutes" in args:
-            assert any(k in users[-1].lower() for k in ("in ", "after", "from now"))
+            assert any(k in users[-1].lower() for k in ("in ", "after", "from now", "timer for"))
         if "repeat" in args:
             assert "date" not in args and "time" in args
     assert n > 300
@@ -120,3 +121,19 @@ def test_one_time_reminders_are_in_the_future():
             # the only past times in gold data are "today" requests that the scheduler rejects
             assert when > now or when.date() == now.date()
             assert when - now < timedelta(days=80)
+
+
+def test_every_user_message_gets_a_reply_and_test_split_is_frozen():
+    import hashlib
+    import json
+
+    for ep in generate(1500, seed=41):
+        evs = ep["events"]
+        for i, ev in enumerate(evs):
+            if ev["type"] == "user":
+                assert i + 1 < len(evs) and evs[i + 1]["type"] == "arouse", ep["id"]
+    # the held-out benchmark must stay byte-identical when the train generator changes
+    test = generate(400, 9001, "test")
+    blob = "".join(json.dumps(e, ensure_ascii=False, separators=(",", ":")) + "\n" for e in test).encode()
+    committed = (ROOT_DIR / "benchmarks/agentbench_v1/test.jsonl").read_bytes()
+    assert hashlib.sha256(blob).hexdigest() == hashlib.sha256(committed).hexdigest()

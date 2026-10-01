@@ -151,6 +151,45 @@ OUT_OF_SCOPE = ["what is the capital of France?", "tell me a joke", "write a poe
                 "how do I cook biryani?", "what is the price of gold?", "who is the prime minister?"]
 TEST_OUT_OF_SCOPE = ["what's the population of Mumbai?", "tell me a story", "solve 2x + 3 = 11",
                      "what's the stock price of Tata Motors?"]
+# --- v3: extra train-only variety (held-out test phrasings and entities stay excluded) ---
+HOW_ARE_YOU = ["how are you?", "how are you doing?", "how's it going?", "what's up?"]
+BYE = ["bye", "goodbye", "see you", "good night", "bye bye", "see you later"]
+ACKS = ["ok", "okay", "cool", "great", "nice", "alright", "got it"]
+_OOS_PLACES = ["France", "Japan", "Delhi", "Kerala", "Brazil", "Canada", "Egypt", "London", "Pune", "Nepal", "Kenya",
+               "Paris", "Chennai", "Australia", "Germany", "Goa", "Russia", "Peru"]
+_OOS_ATTR = ["capital", "population", "currency", "area", "language", "president", "climate", "history"]
+_OOS_KINDS = ["joke", "poem", "fun fact", "riddle", "song", "limerick", "quote"]
+_OOS_TOPICS = ["rain", "cows", "the moon", "friendship", "cricket", "the sea", "trains", "mountains", "coffee", "space"]
+_OOS_EXPLAIN = ["quantum physics", "black holes", "photosynthesis", "inflation", "machine learning", "gravity",
+                "the stock market", "democracy", "electricity", "evolution"]
+_OOS_HOW = ["cook biryani", "learn python", "fix a flat tyre", "lose weight", "play chess", "bake bread", "invest money",
+            "write a resume", "grow tomatoes", "tie a tie"]
+_OOS_THINGS = ["gold", "petrol", "bitcoin", "onions", "silver", "the dollar", "diesel", "tomatoes"]
+_OOS_LANGS = ["Spanish", "French", "Hindi", "German", "Tamil", "Japanese"]
+_OOS_WORDS = ["hello", "thank you", "good morning", "water", "friend", "milk"]
+
+
+def oos_question(rng: random.Random) -> str:
+    """A general request Arouse cannot do (it has no world knowledge): must be refused, not routed to a tool."""
+    a, b = rng.randint(2, 99), rng.randint(2, 99)
+    return rng.choice([
+        f"what is the {rng.choice(_OOS_ATTR)} of {rng.choice(_OOS_PLACES)}?",
+        f"tell me a {rng.choice(_OOS_KINDS)}", f"tell me a {rng.choice(_OOS_KINDS)} about {rng.choice(_OOS_TOPICS)}",
+        f"write a {rng.choice(_OOS_KINDS)} about {rng.choice(_OOS_TOPICS)}",
+        f"what is {a} {rng.choice(['times', 'plus', 'minus', 'divided by'])} {b}?", f"calculate {a} * {b}",
+        f"solve {a}x - {b} = {rng.randint(1, 50)}", f"translate {rng.choice(_OOS_WORDS)} into {rng.choice(_OOS_LANGS)}",
+        f"explain {rng.choice(_OOS_EXPLAIN)}", f"how do I {rng.choice(_OOS_HOW)}?", f"what is the price of {rng.choice(_OOS_THINGS)}?",
+        f"what's the weather in {rng.choice(_OOS_PLACES)}?", f"who won the {rng.choice(['football', 'cricket', 'tennis'])} match?",
+        f"recommend a {rng.choice(['movie', 'book', 'song', 'restaurant', 'game'])}", f"what do you think about {rng.choice(_OOS_TOPICS)}?",
+        f"how far is {rng.choice(_OOS_PLACES)} from {rng.choice(_OOS_PLACES)}?", f"define {rng.choice(_OOS_EXPLAIN)}",
+        f"write code to {rng.choice(['sort a list', 'reverse a string', 'parse a CSV', 'build a website'])}",
+        f"what's the news about {rng.choice(_OOS_PLACES)}?", f"who invented {rng.choice(['the telephone', 'paper', 'the radio'])}?",
+    ])
+
+
+AUG_PREFIX = ["", "", "", "please ", "hey, ", "hi Arouse, ", "can you ", "Arouse, ", "quick one: ", "ok so "]
+AUG_SUFFIX = ["", "", "", " please", " thanks", " thank you", "!", " pls"]
+
 YES = ["yes", "yes please", "sure", "yeah", "ok, do that", "yes, do it"]
 NO = ["no", "no thanks", "never mind", "no, leave it"]
 
@@ -160,6 +199,9 @@ R_THANKS = "You're welcome!"
 R_HELP = CAPABILITIES + " For example: 'Remind me tomorrow at 8 AM to check sales.'"
 R_WHO = "I'm Arouse, a task assistant. " + CAPABILITIES
 R_OUT = "I can't help with that yet. " + CAPABILITIES
+R_HOW = "I'm doing well, thanks! " + CAPABILITIES
+R_BYE = "Goodbye!"
+R_ACK = "Okay! Anything else?"
 
 Q_TIME = "What time should I remind you?"
 Q_WHEN = "When should I remind you?"
@@ -277,6 +319,7 @@ class Generator:
         self.greetings = TEST_GREETINGS if test else GREETINGS
         self.help = TEST_HELP + HELP[:1] if test else HELP
         self.oos = TEST_OUT_OF_SCOPE if test else OUT_OF_SCOPE
+        self.aug = random.Random(seed * 7919 + 17)  # separate stream: never perturbs the main one
 
     def task(self) -> str:
         """Train: 30% fixed phrases, 30% compositional, 40% wild (forces copying)."""
@@ -306,6 +349,17 @@ class Generator:
             if f not in TEST_FILES:
                 names.add(f)
         return sorted(names)
+
+    def say(self, text: str, chat: bool = False) -> None:
+        """Add a user message; in train, sometimes wrap it in a polite prefix/suffix (chit-chat: suffix only)."""
+        if not self.test and self.aug.random() < 0.5:
+            pre = "" if chat else self.aug.choice(AUG_PREFIX)
+            suf = self.aug.choice(["", "!", " :)"] if chat else AUG_SUFFIX)
+            body = text[:1].lower() + text[1:] if pre else text
+            if suf and body[-1:] in ".!?":
+                body = body[:-1]
+            text = pre + body + suf
+        self._b.user(text)
 
     def pick(self, train: list[str], test: list[str]) -> str:
         """Sentence template: test split uses only the held-out templates."""
@@ -419,7 +473,7 @@ class Generator:
         task = self.task()
         h, m = self.time()
         t = say_time(r, h, m)
-        if r.random() < 0.12:  # "today": may already have passed -> error path
+        if r.random() < (0.12 if self.test else 0.2):  # "today": may already have passed -> error path
             day, date, label = "today", b.now.strftime("%Y-%m-%d"), "Today"
         elif r.random() < 0.15:  # time only -> scheduler picks the next occurrence
             day, date, label = None, None, None
@@ -434,6 +488,9 @@ class Generator:
         else:
             text = self.pick(
                 [f"Remind me {day} at {t} to {task}.", f"remind me {day} at {t} to {task}", f"{cap(day)} at {t}, remind me to {task}.",
+                 f"I want a reminder {day} at {t} to {task}.", f"Set an alarm {day} at {t} to {task}.",
+                 f"Make a reminder for {day} at {t} to {task}.", f"{cap(day)} at {t} remind me to {task} please.",
+                 f"Remind me {day} at {t} that I have to {task}.", f"Book a reminder {day} at {t}: {task}.",
                  f"Set a reminder to {task} {day} at {t}.", f"Can you remind me to {task} {day} at {t}?",
                  f"Please remind me to {task} at {t} {day}.", f"I need to {task} {day} at {t}. Remind me.",
                  f"Create a reminder for {day} at {t}: {task}.", f"Remind me to {task} at {t} {day}.", f"Reminder {day} {t} {task}",
@@ -444,7 +501,7 @@ class Generator:
                  f"{cap(day)} {t}: {task}. Please remind me.", f"Ping me {day} at {t} to {task}."])
             args = {"task": task, "date": date, "time": hm(h, m)}
             plan = f"{label} is {date}. One-time reminder on {date} at {hm(h, m)}."
-        b.user(text)
+        self.say(text)
         self.create_with_errors(b, args, plan, None, ["intent"])
         return "scheduling_one_time"
 
@@ -464,10 +521,12 @@ class Generator:
             span, minutes = "half an hour", 30
         text = self.pick([f"Remind me in {span} to {task}.", f"In {span}, remind me to {task}.", f"Remind me to {task} in {span}.",
                           f"After {span} remind me to {task}.", f"Set a reminder in {span}: {task}.",
-                          f"Can you remind me in {span} to {task}?", f"Remind me to {task} after {span}."],
+                          f"Can you remind me in {span} to {task}?", f"Remind me to {task} after {span}.",
+                          f"In {span} I need to {task}, remind me.", f"Set a timer for {span} to {task}.",
+                          f"Remind me in {span} that I have to {task}."],
                          [f"Ping me in {span} to {task}.", f"{cap(span)} from now, remind me to {task}.",
                           f"Give me a reminder to {task} in {span}."])
-        b.user(text)
+        self.say(text)
         self.create_with_errors(b, {"task": task, "in_minutes": minutes}, f"Relative reminder in {minutes} minutes.", None, ["intent"])
         return "scheduling_relative"
 
@@ -480,9 +539,11 @@ class Generator:
         text = self.pick([f"{cap(phrase)} at {t}, remind me to {task}.", f"Remind me {phrase} at {t} to {task}.",
                           f"Remind me to {task} {phrase} at {t}.", f"Set a recurring reminder {phrase} at {t}: {task}.",
                           f"I want a reminder {phrase} at {t} to {task}.", f"Please remind me to {task} {phrase} at {t}.",
-                          f"Add a reminder {phrase} at {t} to {task}."],
+                          f"Add a reminder {phrase} at {t} to {task}.", f"Set a reminder {phrase} at {t} to {task}.",
+                          f"Can you remind me to {task} {phrase} at {t}?", f"{cap(phrase)} at {t}: {task}.",
+                          f"I need to {task} {phrase} at {t}, remind me."],
                          [f"Could you remind me {phrase} at {t} to {task}?", f"{cap(phrase)} at {t} I need to {task}. Remind me."])
-        b.user(text)
+        self.say(text)
         args = {"task": task, "time": hm(h, m), "repeat": repeat}
         self.create_with_errors(b, args, f"Recurring reminder {rule_words(repeat)} at {hm(h, m)}.", repeat, ["intent"])
         return "scheduling_recurring"
@@ -494,25 +555,32 @@ class Generator:
         kind = r.choice(["day", "day", "rule", "vague", "later"])
         if kind == "day":
             day, date, label = self.day(b)
-            text = self.pick([f"Remind me {day} to {task}.", f"Set a reminder {day} to {task}.", f"{cap(day)}, remind me to {task}."],
+            text = self.pick([f"Remind me {day} to {task}.", f"Set a reminder {day} to {task}.", f"{cap(day)}, remind me to {task}.",
+                              f"I need a reminder {day} to {task}.", f"Please remind me {day} to {task}.",
+                              f"Can you set a reminder {day} to {task}?", f"{cap(day)} I have to {task}, remind me.",
+                              f"Add a reminder {day} to {task}.", f"Remind me to {task} {day}."],
                              [f"Don't let me forget to {task} {day}.", f"Ping me {day} to {task}."])
             q, pending = Q_TIME, ("date", date, label)
         elif kind == "rule":
             phrase, repeat, _ = self.rule()
-            text = self.pick([f"Remind me {phrase} to {task}.", f"{cap(phrase)}, remind me to {task}."],
+            text = self.pick([f"Remind me {phrase} to {task}.", f"{cap(phrase)}, remind me to {task}.",
+                              f"Remind me to {task} {phrase}.", f"Set a reminder {phrase} to {task}.",
+                              f"I want a reminder {phrase} to {task}."],
                              [f"Could you remind me {phrase} to {task}?"])
             q, pending = Q_TIME, ("repeat", repeat, None)
         elif kind == "vague":
             day, date, label = self.day(b)
             vague = r.choice(["in the morning", "in the evening", "after dinner", "in the afternoon", "after lunch"])
-            text = self.pick([f"Remind me {day} {vague} to {task}.", f"{cap(day)} {vague}, remind me to {task}."],
+            text = self.pick([f"Remind me {day} {vague} to {task}.", f"{cap(day)} {vague}, remind me to {task}.",
+                              f"Remind me to {task} {day} {vague}.", f"Set a reminder {day} {vague} to {task}."],
                              [f"Ping me {day} {vague} to {task}."])
             q, pending = Q_TIME, ("date", date, label)
         else:
-            text = self.pick([f"Remind me later to {task}.", f"Remind me to {task}.", f"Set a reminder to {task}."],
+            text = self.pick([f"Remind me later to {task}.", f"Remind me to {task}.", f"Set a reminder to {task}.",
+                              f"I need a reminder to {task}.", f"Add a reminder to {task}.", f"Please remind me to {task}."],
                              [f"Can you remind me to {task} sometime?"])
             q, pending = Q_WHEN, None
-        b.user(text)
+        self.say(text)
         b.act(Action.ask_user(q), ["intent", "ambiguity"], plan="The time is missing, so I should ask instead of guessing.")
         if pending is None or r.random() < 0.3:
             return "ambiguity"
@@ -535,7 +603,8 @@ class Generator:
         h, m = self.time()
         t = say_time(r, h, m)
         day, date, label = self.day(b)
-        b.user(self.pick([f"Set a reminder for {day} at {t}.", f"Remind me {day} at {t}.", f"Create a reminder {day} at {t}."],
+        self.say(self.pick([f"Set a reminder for {day} at {t}.", f"Remind me {day} at {t}.", f"Create a reminder {day} at {t}.",
+                          f"Add a reminder {day} at {t}.", f"Remind me of something {day} at {t}."],
                          [f"I need a reminder {day} at {t}."]))
         b.act(Action.ask_user(Q_TASK), ["intent", "ambiguity"], plan="The reminder text is missing, so I should ask.")
         if r.random() < 0.3:
@@ -549,8 +618,9 @@ class Generator:
 
     def s_list(self) -> str:
         b = self._b
-        b.user(self.pick(["What reminders do I have?", "Show my reminders.", "List my reminders", "What's on my schedule?",
-                          "Do I have any reminders?", "show reminders"],
+        self.say(self.pick(["What reminders do I have?", "Show my reminders.", "List my reminders", "What's on my schedule?",
+                          "Do I have any reminders?", "show reminders", "What have I scheduled?", "my reminders",
+                          "What are my reminders?", "Can you list my reminders?", "Show me everything I scheduled."],
                          ["Which reminders are set?", "Tell me my upcoming reminders."]))
         ok, res = b.act(Action.tool_call("scheduler.list", {}), ["intent", "tool_selection"], plan="List the reminders.")
         items = res["reminders"]
@@ -571,8 +641,14 @@ class Generator:
             taken = {x.task.lower() for x in existing}
             target = next(t for t in iter(self.task, None) if t.lower() not in taken)
         q = target
-        b.user(self.pick([f"Cancel my reminder to {q}.", f"Delete the reminder to {q}.", f"Remove the reminder about {q}.",
-                          f"Stop reminding me to {q}."],
+        self.say(self.pick([f"Cancel my reminder to {q}.", f"Delete the reminder to {q}.", f"Remove the reminder about {q}.",
+                          f"Stop reminding me to {q}.", f"Delete my reminder to {q}.", f"Remove my {q} reminder.",
+                          f"Cancel the {q} reminder.", f"Get rid of the reminder to {q}.",
+                          f"I don't need the reminder to {q} anymore.", f"Erase the reminder about {q}.",
+                          f"Turn off the reminder to {q}.", f"Can you delete the reminder about {q}?",
+                          f"Clear the reminder to {q}.", f"Forget the reminder to {q}.", f"Remove {q} from my reminders.",
+                          f"Delete {q} from my reminders.", f"No need to remind me to {q} anymore.",
+                          f"Cancel the reminder about {q}, please."],
                          [f"I no longer need the reminder to {q}. Delete it.", f"Please drop the {q} reminder."]))
         ok, res = b.act(Action.tool_call("scheduler.list", {}), ["intent", "tool_selection"], plan="Find the reminder, then delete it.")
         match = [x for x in res["reminders"] if x["task"].lower() == target.lower()]
@@ -590,9 +666,15 @@ class Generator:
     def s_note(self) -> str:
         b = self._b
         fact = self.fact()
-        b.user(self.pick([f"Note that {fact}.", f"Save a note: {fact}.", f"Write down that {fact}.", f"Make a note: {fact}.",
+        self.say(self.pick([f"Note that {fact}.", f"Save a note: {fact}.", f"Write down that {fact}.", f"Make a note: {fact}.",
                           f"Add a note: {fact}.", f"Please note: {fact}.", f"Keep a note that {fact}.", f"Record this: {fact}.",
-                          f"Take a note: {fact}.", f"note: {fact}"],
+                          f"Take a note: {fact}.", f"note: {fact}", f"Write this down: {fact}.", f"Can you note that {fact}?",
+                          f"Add to my notes: {fact}.", f"Put in my notes that {fact}.", f"Save this: {fact}.",
+                          f"Log this: {fact}.", f"Note down that {fact}.", f"Make a note that {fact}.",
+                          f"Please save a note: {fact}.", f"Store a note: {fact}.", f"New note: {fact}.",
+                          f"I want to note that {fact}.", f"Could you write down that {fact}?", f"Memo: {fact}.",
+                          f"Create a note saying {fact}.", f"Add a note saying {fact}.", f"Note this down: {fact}.",
+                          f"For my notes: {fact}.", f"Write a note: {fact}.", f"Keep this in my notes: {fact}."],
                          [f"Please jot down: {fact}.", f"Remember this note: {fact}."]))
         ok, res = b.act(Action.tool_call("notes.create", {"text": fact}), ["intent", "tool_selection", "argument_generation"],
                         plan="Save a note.")
@@ -622,10 +704,14 @@ class Generator:
         else:
             name = r.choice(files)
         count = r.random() < 0.4
-        text = self.pick([f"How many lines are in {name}?", f"How many rows does {name} have?"],
+        text = self.pick([f"How many lines are in {name}?", f"How many rows does {name} have?",
+                          f"How many lines does {name} have?", f"How long is {name}?", f"Number of lines in {name}?",
+                          f"Tell me how many rows {name} has.", f"How many entries are in {name}?"],
                          [f"Count the lines in {name}."]) if count else \
-            self.pick([f"Read {name}.", f"Open {name}.", f"What's in {name}?", f"Show me {name}."], [f"Can you look at {name}?"])
-        b.user(text)
+            self.pick([f"Read {name}.", f"Open {name}.", f"What's in {name}?", f"Show me {name}.", f"Read {name} for me.",
+                       f"Open the file {name}.", f"Show {name}.", f"What does {name} say?", f"Display {name}."],
+                      [f"Can you look at {name}?"])
+        self.say(text)
         ok, res = b.act(Action.tool_call("file.read", {"path": name}), ["intent", "tool_selection", "argument_generation"],
                         plan=f"Read {name}.")
 
@@ -656,7 +742,8 @@ class Generator:
 
     def s_list_files(self) -> str:
         b = self._b
-        b.user(self.pick(["What files do I have?", "List my files.", "Show my files", "Which files are there?"],
+        self.say(self.pick(["What files do I have?", "List my files.", "Show my files", "Which files are there?",
+                          "What files are available?", "show files", "List all files."],
                          ["What files can you see?"]))
         ok, res = b.act(Action.tool_call("file.list", {}), ["intent", "tool_selection"], plan="List the files.")
         b.act(Action.finish(f"You have {len(res['files'])} files: {', '.join(res['files'])}."), ["completion_verification"],
@@ -664,19 +751,37 @@ class Generator:
         return "file"
 
     def s_chat(self) -> str:
-        r, b = self.rng, self._b
-        kind = r.choices(["greet", "help", "who", "oos"], [3, 2, 1, 4])[0]
-        text, reply = {
-            "greet": (r.choice(self.greetings), R_GREET),
-            "help": (r.choice(self.help), R_HELP),
-            "who": (r.choice(WHO), R_WHO),
-            "oos": (r.choice(self.oos), R_OUT),
-        }[kind]
+        r = self.rng
+        if self.test:  # exact original draw order: the held-out benchmark must not change
+            kind = r.choices(["greet", "help", "who", "oos"], [3, 2, 1, 4])[0]
+            text, reply = {
+                "greet": (r.choice(self.greetings), R_GREET),
+                "help": (r.choice(self.help), R_HELP),
+                "who": (r.choice(WHO), R_WHO),
+                "oos": (r.choice(self.oos), R_OUT),
+            }[kind]
+        else:
+            kind = r.choices(["greet", "help", "who", "oos", "how", "bye", "ack"], [3, 2, 1, 8, 1, 1, 1])[0]
+            if kind == "oos":
+                banned = {t.lower() for t in TEST_OUT_OF_SCOPE} | {"tell me a story"}
+                text = r.choice(self.oos) if r.random() < 0.25 else next(
+                    q for q in iter(lambda: oos_question(r), None)
+                    if q.lower() not in banned and "mumbai" not in q.lower() and "tata" not in q.lower())
+                reply = R_OUT
+            else:
+                pool, reply = {"greet": (self.greetings, R_GREET), "help": (self.help, R_HELP), "who": (WHO, R_WHO),
+                               "how": (HOW_ARE_YOU, R_HOW), "bye": (BYE, R_BYE), "ack": (ACKS, R_ACK)}[kind]
+                text = r.choice(pool)
         if r.random() < 0.3:
             text = cap(text)
-        b.user(text)
-        b.act(Action.finish(reply), ["intent"])
+        self.say(text, chat=kind != "oos")
+        self._b.act(Action.finish(reply), ["intent"])
         return "chat" if kind != "oos" else "out_of_scope"
+
+    TRAIN_SCENARIOS: list[tuple[str, int]] = [
+        ("s_one_time", 18), ("s_relative", 5), ("s_recurring", 10), ("s_missing_time", 14), ("s_missing_task", 4),
+        ("s_list", 5), ("s_delete", 9), ("s_note", 8), ("s_file", 10), ("s_list_files", 2), ("s_chat", 12),
+    ]
 
     SCENARIOS: list[tuple[str, int]] = [
         ("s_one_time", 16), ("s_relative", 6), ("s_recurring", 12), ("s_missing_time", 12), ("s_missing_task", 4),
@@ -691,7 +796,7 @@ class Generator:
         if r.random() < 0.03:
             failures["notes.create"] = r.choice([1, 2])
         self._b = b = self.world(failures)
-        names, weights = zip(*self.SCENARIOS)
+        names, weights = zip(*(self.SCENARIOS if self.test else self.TRAIN_SCENARIOS))
         cats = []
         for i in range(r.choices([1, 2, 3], [70, 22, 8])[0]):
             cats.append(getattr(self, r.choices(names, weights)[0])())
