@@ -20,7 +20,8 @@ _WORD = re.compile(r"[\w'’-]+|[^\w\s]")
 _MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
            "november", "december"]
 BOUNDARY_WORDS = {"at", "on", "in", "by", "after", "before", "from", "tomorrow", "today", "tonight", "every", "each",
-                  "this", "next", "daily", "please", "remind", "so", "then", "monthly", "weekly", *WEEKDAYS,
+                  "this", "next", "daily", "please", "pls", "thanks", "thank", "thx", "remind", "so", "then", "monthly",
+                  "weekly", *WEEKDAYS,
                   *(m for m in _MONTHS), *(m[:3] for m in _MONTHS)}
 
 

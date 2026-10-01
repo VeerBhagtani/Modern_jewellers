@@ -33,7 +33,8 @@ _DATE_PATTERNS = [
 ]
 # Where a copied value must stop: sentence punctuation (all fields) and, for reminder
 # tasks, the start of a time/date phrase (" at 5", " in 3 hours", " on Sunday", " every ...").
-_STOP_ALL = re.compile(r"[.?!;]")
+_STOP_ALL = re.compile(r"[.?!;]|\s(?:please|pls|thanks|thank you|thx)\b", re.I)
+_STOP_PATH = re.compile(r"[\s?!;,]|\.(?:\s|$)")  # a file name ends at whitespace or a sentence-final "."
 _DAYS = "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
 _STOP_TASK = re.compile(
     rf"[,:]|\s(?:at|in|on|by|after|from|before)\s+(?:\d|an?\s|half|the\s\d|{_DAYS}|noon|midnight)"
@@ -147,8 +148,8 @@ class CopyConstraint:
                 starts = [i for i in starts if not src[i].isdigit()]  # tasks start with a word, not "40 PM"
             for i in starts:
                 rest = src[i + len(partial):]
-                stops = [m.start() for p in ((_STOP_ALL, _STOP_TASK) if field == "task" else (_STOP_ALL,))
-                         if (m := p.search(src[i:]))]  # measured from the value's start
+                pats = {"task": (_STOP_ALL, _STOP_TASK), "text": (_STOP_ALL,), "path": (_STOP_PATH,)}[field]
+                stops = [m.start() for p in pats if (m := p.search(src[i:]))]  # measured from the value's start
                 if stops:
                     cut = min(stops) - len(partial)
                     if cut <= 0:
