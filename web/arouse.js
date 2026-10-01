@@ -1013,7 +1013,9 @@
       fetch(base + "tokenizer.json").then((r) => r.json()),
       fetch(base + "response_vocab.txt").then((r) => r.text()),
     ]);
-    const resp = await fetch(base + "weights.bin");
+    // weights.bin (raw float16), or base64 text where a host only serves text files
+    const resp = await fetch(base + (cfg.weights_file || "weights.bin"));
+    if (!resp.ok) throw new Error(`weights: HTTP ${resp.status}`);
     const total = Number(resp.headers.get("content-length")) || 0;
     let buffer;
     if (resp.body && total) {
@@ -1029,6 +1031,11 @@
     } else {
       buffer = await resp.arrayBuffer();
       onProgress(1);
+    }
+    if (cfg.weights_encoding === "base64") {
+      const bin = atob(new TextDecoder().decode(buffer).replace(/\s+/g, "")), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      buffer = bytes.buffer;
     }
     const tok = new Tokenizer(tokSpec), model = new Model(cfg, buffer), engine = new Engine(model, tok);
     const vocab = new Set(vocabText.split(/\s+/).filter(Boolean));

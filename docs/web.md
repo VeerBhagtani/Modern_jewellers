@@ -16,7 +16,7 @@ Opening `web/index.html` directly from disk (`file://`) does not work, because b
 | `web/arouse.js` | JavaScript port of the Arouse runtime: byte-level BPE tokenizer, the Transformer (RoPE, GQA, SwiGLU, RMSNorm, KV cache, blocked prompt prefill), sampling, action protocol codec, copy- and date-constrained decoding, grounding and answer guards, the agent loop, the sandbox tools |
 | `web/worker.js` | Loads the model and runs the agent off the main thread |
 | `web/index.html` | Chat UI plus a workspace panel (reminders, notes, files) |
-| `web/model/` | `config.json` (architecture and tensor table), `weights.bin` (float16), `tokenizer.json`, `response_vocab.txt` |
+| `web/model/` | `config.json` (architecture and tensor table), `weights.bin` (float16), `tokenizer.json`, `response_vocab.txt`. Hosts that only serve text can use base64 weights instead: set `"weights_file": "weights.b64.txt", "weights_encoding": "base64"` in `config.json` |
 
 ## Behaviour
 
