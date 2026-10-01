@@ -581,6 +581,18 @@
     return tok._pieces;
   }
 
+  function referencedDates(texts, now) {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()), out = new Set();
+    for (const text of texts) {
+      const low = text.toLowerCase(), ws = new Set(low.match(/[a-z]+/g) || []);
+      if (ws.has("today") || ws.has("tonight")) out.add(fmtDate(today));
+      if (ws.has("tomorrow")) out.add(fmtDate(addDays(today, low.includes("after tomorrow") ? 2 : 1)));
+      WEEKDAYS.forEach((name, w) => { if (ws.has(name)) out.add(fmtDate(addDays(today, (w - pyWeekday(today) + 7) % 7 || 7))); });
+    }
+    for (const d of mentionedDates(texts, today)) out.add(d);
+    return out;
+  }
+
   class CopyConstraint {
     constructor(tok, events, context) {
       this.tok = tok;
@@ -590,12 +602,14 @@
       const listed = req.filter((e) => e.type === "tool_result").flatMap((e) => e.content.files || []);
       this.sources = { task: said, text: said, path: said.concat(listed) };
       this.listed = new Set(listed);
-      const dates = new Set();
+      let dates = new Set();
       if (context && context.now) {
         dates.add(context.now.slice(0, 10));
         for (const m of String(context.calendar || "").matchAll(/\d{4}-\d{2}-\d{2}/g)) dates.add(m[0]);
+        const asked = req.filter((e) => e.type === "arouse" && e.turn.action.type === "ask_user").map((e) => e.turn.action.question);
         const [y, mo, d] = context.now.slice(0, 10).split("-").map(Number);
-        for (const x of mentionedDates(said, new Date(y, mo - 1, d))) dates.add(x);
+        const ref = referencedDates(said.concat(asked), new Date(y, mo - 1, d));
+        if (ref.size) dates = ref;
       }
       this.dates = [...dates].sort();
     }

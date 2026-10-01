@@ -177,7 +177,7 @@ def test_date_constraint(tiny_tokenizer):
     ctx = build_context(NOW)  # tomorrow = 2026-10-01, next friday = 2026-10-02
     evs = [{"type": "user", "content": "Remind me on October 20 at 9 to pay rent."}]
     cc = CopyConstraint(tiny_tokenizer, evs, ctx)
-    assert {"2026-09-30", "2026-10-01", "2026-10-02", "2026-10-20"} <= set(cc.dates)
+    assert cc.dates == ["2026-10-20"]  # only the date the user named
     allowed = _allowed_texts(tiny_tokenizer, cc, '<|tool_call|>{"tool":"scheduler.create","arguments":{"date":"2026-10-')
     assert allowed and all(any(d[8:].startswith(p) for d in cc.dates if d.startswith("2026-10-")) for p in allowed)
 
@@ -255,3 +255,20 @@ def test_ungrounded_final_answer_is_written_from_the_tool_result(tiny_tokenizer)
     res = AgentRuntime(scripted_engine(tiny_tokenizer, [CREATE, honest]), REGISTRY, constrain_copy=False).run(
         HEADER, ASK, Sandbox(NOW).execute)
     assert res.final == honest.action and not res.turns[-1].rewritten
+
+
+def test_dates_follow_the_words_of_the_request(tiny_tokenizer):
+    from arouse.agent.constraints import referenced_dates
+
+    now = NOW  # Wednesday 2026-09-30 19:21
+    assert referenced_dates(["Remind me on Friday to order feed.", "6 pm"], now) == {"2026-10-02"}
+    assert referenced_dates(["remind me this wednesday"], now) == {"2026-10-07"}  # today is Wednesday: next week
+    assert referenced_dates(["tonight at 9", "and tomorrow"], now) == {"2026-09-30", "2026-10-01"}
+    assert referenced_dates(["the day after tomorrow at 9"], now) == {"2026-10-02"}
+    assert referenced_dates(["at 5 pm remind me to call mom"], now) == set()
+    ask = {"type": "arouse", "turn": {"action": {"type": "ask_user",
+                                                 "question": "19:00 today has already passed. Should I set it for tomorrow at 19:00 instead?"}}}
+    evs = [{"type": "user", "content": "Remind me today at 7 PM to feed the dog."}, ask, {"type": "user", "content": "yes"}]
+    assert CopyConstraint(tiny_tokenizer, evs, build_context(NOW)).dates == ["2026-09-30", "2026-10-01"]
+    no_day = [{"type": "user", "content": "Remind me at 5 to call mom."}]
+    assert len(CopyConstraint(tiny_tokenizer, no_day, build_context(NOW)).dates) == 8  # whole calendar (today + 7 days)

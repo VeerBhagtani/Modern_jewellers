@@ -6,20 +6,23 @@ sources (the user's words in this request; for paths also file names returned by
 tool), plus the closing quote once the value is a complete phrase ending at a boundary.
 The model still chooses which phrase to copy and where it ends; it cannot invent words.
 
-"date" values are restricted to dates that exist in the conversation: today, tomorrow,
-the upcoming weekdays from the runtime calendar, and the next occurrence of any explicit
-date the user wrote ("October 5", "5th of October"). The model still chooses which one.
+"date" values are restricted to the dates this request refers to: "today"/"tonight",
+"tomorrow", weekday names (their next occurrence, as in the runtime calendar) and explicit
+dates ("October 5", "5th of October"), read from the user's messages and Arouse's own
+questions (e.g. "...should I set it for tomorrow instead?"). If the request names no day,
+any calendar date is allowed. The model still chooses which one.
 Everything else in the turn is decoded unconstrained.
 """
 
 from __future__ import annotations
 
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import torch
 
+from arouse.agent.context import WEEKDAYS, next_weekday_date
 from arouse.agent.grounding import copied_from, current_request
 from arouse.tokenizer import ArouseTokenizer, Special
 
@@ -64,6 +67,23 @@ def mentioned_dates(texts: list[str], today: date) -> set[str]:
     return out
 
 
+def referenced_dates(texts: list[str], now: datetime) -> set[str]:
+    """Dates the texts refer to (see the module docstring)."""
+    today = now.date()
+    out = set()
+    for text in texts:
+        low = text.lower()
+        words = set(re.findall(r"[a-z]+", low))
+        if words & {"today", "tonight"}:
+            out.add(today.isoformat())
+        if "tomorrow" in words:
+            out.add((today + timedelta(days=2 if "after tomorrow" in low else 1)).isoformat())
+        for w, name in enumerate(WEEKDAYS):
+            if name in words:
+                out.add(next_weekday_date(now, w).date().isoformat())
+    return out | mentioned_dates(texts, today)
+
+
 def calendar_dates(context: dict[str, Any] | None) -> set[str]:
     """Every YYYY-MM-DD the runtime context mentions (today, tomorrow, upcoming weekdays)."""
     if not context or "now" not in context:
@@ -104,8 +124,9 @@ class CopyConstraint:
         self.listed = set(listed)
         dates = calendar_dates(context)
         if dates:
-            today = datetime.strptime(context["now"][:10], "%Y-%m-%d").date()
-            dates |= mentioned_dates(said, today)
+            asked = [ev["turn"]["action"]["question"] for ev in req
+                     if ev["type"] == "arouse" and ev["turn"]["action"]["type"] == "ask_user"]
+            dates = referenced_dates(said + asked, datetime.strptime(context["now"][:16], "%Y-%m-%dT%H:%M")) or dates
         self.dates = sorted(dates)
 
     def open_field(self, generated: list[int]) -> tuple[str, str, str] | None:
