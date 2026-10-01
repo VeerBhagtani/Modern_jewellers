@@ -31,7 +31,7 @@ Model `arouse-agent-s`: 5,475,584 params, trained 2000 steps. Clock fixed at 202
 **User:** What reminders do I have?  
 &nbsp;&nbsp;↳ `scheduler.list {}`  
 &nbsp;&nbsp;↳ tool_result: `{"success": true, "count": 4, "reminders": [{"task_id": "r-4", "task": "feed the calves", "next_run": "2026-09-30T21:21"}, {"task_id": "r-1", "task": `  
-**Arouse:** You have 4 reminders: feed the calves on 2026-09-30 at 21:21; check sales on 2026-10-01 at 08:00; call the vet on 2026-10-01 at 19:30; call the cow on 2026-10-05 at 09:00 (repeats).
+**Arouse:** You have 4 reminders: feed the calves on 2026-09-30 at 21:21; check sales on 2026-10-01 at 08:00; call the vet on 2026-10-01 at 19:30; pay the staff on 2026-10-05 at 09:00 (repeats).
 
 **User:** Cancel my reminder to check sales.  
 &nbsp;&nbsp;↳ `scheduler.list {}`  

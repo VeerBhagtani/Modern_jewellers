@@ -59,7 +59,42 @@ The training data is **synthetic agent episodes only**.
 
 ## Results (Arouse AgentBench v1, real runs)
 
-Final benchmark results are being generated (`benchmarks/results/`).
+`arouse bench`, full runs, with reports in `benchmarks/results/`:
+- **Held-out:** 1198 decisions from 400 episodes. Their tasks, notes, file names and sentence templates never appear in training.
+- **In-distribution:** 456 decisions from 150 episodes. Same templates as training, but unseen samples.
+
+Two modes are reported:
+- **Raw:** the model alone (greedy decoding).
+- **System:** the full runtime (constrained decoding, retries, grounding, guards).
+
+| Metric | Held-out raw | Held-out system | In-dist raw | In-dist system |
+|---|---|---|---|---|
+| Decision accuracy (type + exact tool and arguments) | 61.69% | **78.96%** | 89.91% | **93.86%** |
+| Structured-output validity | 97.33% | **99.58%** | 99.12% | **100.0%** |
+| Action-type accuracy | 89.32% | **91.4%** | 98.46% | **99.34%** |
+| Tool-selection accuracy | 87.03% | **88.53%** | 97.56% | **99.51%** |
+| Argument exact match | 30.26% | **66.73%** | 78.54% | **87.32%** |
+| Scheduling exact match | 18.12% | **76.05%** | 74.38% | **80.99%** |
+| Asks when a detail is missing | 71.96% | **71.96%** | 100.0% | **100.0%** |
+| False completion (finish after a tool error) | 0.0% | **0.0%** | 0.0% | **0.0%** |
+| **End-to-end task success** (correct final action and correct resulting state) | — | **71.25%** | — | **88.0%** |
+
+**Strong on held-out requests (end to end):**
+- recurring reminders: 98.48%
+- relative reminders: 92.0%
+- listing reminders: 100.0%
+- missing-file recovery: 100.0%
+- greetings and help: 100.0%
+- error recovery: 95.45% of decisions
+- false completion: 0% (it never claimed success after a failed tool call)
+
+**Weak on held-out requests (end to end):**
+- unseen note phrasings such as "Please jot down: …": 22.22%
+- delete requests: 32.14%
+- out-of-scope questions: 40.0%
+- one-time reminders: 57.97% held-out, 59.38% in-distribution. Mostly wrong dates, especially "today" when the time has already passed.
+
+The gap between raw and system numbers is what the runtime's constrained decoding and grounding add. The gap between held-out and in-distribution numbers shows that a 5.5M model trained only on synthetic templates generalizes partially to new phrasings. More varied training data and a larger model are the next step.
 
 ## How reliability is engineered
 
