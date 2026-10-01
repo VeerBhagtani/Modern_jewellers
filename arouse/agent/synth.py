@@ -12,6 +12,7 @@ import random
 from datetime import datetime, timedelta
 from typing import Any, Callable
 
+from arouse.agent.answers import created_msg, list_msg, ordinal, rule_words  # noqa: F401
 from arouse.agent.context import DAY_CODES, WEEKDAYS, build_context, fmt_dt, next_weekday_date
 from arouse.agent.episode import Header
 from arouse.agent.tools import REGISTRY, Reminder, Sandbox
@@ -211,10 +212,6 @@ MONTHS = ["January", "February", "March", "April", "May", "June", "July", "Augus
           "November", "December"]
 
 
-def ordinal(n: int) -> str:
-    return f"{n}{'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')}"
-
-
 def hm(h: int, m: int) -> str:
     return f"{h:02d}:{m:02d}"
 
@@ -236,30 +233,8 @@ def say_time(rng: random.Random, h: int, m: int) -> str:
     return rng.choice(forms)
 
 
-def rule_words(repeat: dict[str, Any]) -> str:
-    f = repeat["freq"]
-    if f == "daily":
-        n = repeat.get("interval", 1)
-        return "every day" if n == 1 else f"every {n} days"
-    if f == "monthly":
-        return f"on the {ordinal(repeat['by_month_day'][0])} of every month"
-    days = repeat["by_day"]
-    if days == list(DAY_CODES[:5]):
-        return "every weekday"
-    if days == ["SA", "SU"]:
-        return "every weekend"
-    names = [WEEKDAYS[DAY_CODES.index(d)].capitalize() for d in days]
-    return "every " + " and ".join(names)
-
-
 def cap(s: str) -> str:
     return s[:1].upper() + s[1:]
-
-
-def created_msg(res: dict[str, Any], repeat: dict[str, Any] | None) -> str:
-    date, time = res["next_run"].split("T")
-    msg = f"Reminder set: {res['task']} on {date} at {time}"
-    return msg + (f", repeating {rule_words(repeat)}." if repeat else ".")
 
 
 # --- episode builder -------------------------------------------------------------------
@@ -624,11 +599,7 @@ class Generator:
                          ["Which reminders are set?", "Tell me my upcoming reminders."]))
         ok, res = b.act(Action.tool_call("scheduler.list", {}), ["intent", "tool_selection"], plan="List the reminders.")
         items = res["reminders"]
-        if not items:
-            msg = "You have no reminders."
-        else:
-            parts = [f"{x['task']} on {x['next_run'].replace('T', ' at ')}" + (" (repeats)" if "repeat" in x else "") for x in items]
-            msg = f"You have {len(items)} reminder{'s' if len(items) > 1 else ''}: " + "; ".join(parts) + "."
+        msg = list_msg(items)
         b.act(Action.finish(msg), ["multi_step", "completion_verification"], verify=f"scheduler.list returned {len(items)}.")
         return "list"
 

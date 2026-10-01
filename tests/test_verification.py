@@ -214,3 +214,44 @@ def test_answer_guard_catches_invented_words_but_never_gold_answers():
             if ev["type"] == "arouse":
                 flagged += answer_issue(turn_from_event(ev).action, ep["events"][:i]) is not None
     assert flagged == 0
+
+
+def test_path_constraint_only_allows_whole_file_names(tiny_tokenizer):
+    evs = [{"type": "user", "content": "Count the lines in vet_visits.txt."}]
+    cc = CopyConstraint(tiny_tokenizer, evs, build_context(NOW))
+    assert cc.continuations("path", "") == ["vet_visits.txt"]  # not "the", "lines", "visits.txt" or "txt"
+    listed = evs + [{"type": "arouse", "turn": {"action": {"type": "tool_call", "tool": "file.list", "arguments": {}}}},
+                    {"type": "tool_result", "content": {"success": True, "files": ["herd 2026.csv", "sales.csv"]}}]
+    cc = CopyConstraint(tiny_tokenizer, listed, build_context(NOW))
+    assert set(cc.continuations("path", "")) == {"vet_visits.txt", "herd 2026.csv", "sales.csv"}
+
+
+def test_answer_from_result_matches_training_replies():
+    from arouse.agent.answers import answer_from_result
+
+    checked = 0
+    for ep in generate(600, seed=31):
+        for i, ev in enumerate(ep["events"]):
+            a = ev["type"] == "arouse" and ev["turn"]["action"]
+            prev = ep["events"][i - 1] if i else {}
+            if a and a["type"] == "finish" and prev.get("type") == "tool_result":
+                tool = ep["events"][i - 2]["turn"]["action"]["tool"]
+                got = answer_from_result(ep["events"][:i])
+                if tool == "file.read" and " It starts with" not in a["result"]:
+                    got = got.split(" It starts with")[0]  # "how many lines" replies leave out the preview
+                assert got == a["result"], (tool, a["result"])
+                checked += 1
+    assert checked > 200
+    assert answer_from_result([{"type": "user", "content": "hi"}]) is None
+
+
+def test_ungrounded_final_answer_is_written_from_the_tool_result(tiny_tokenizer):
+    invented = Turn(Action.finish("Reminder set: water the orchids on 2026-10-01 at 08:00."))
+    rt = AgentRuntime(scripted_engine(tiny_tokenizer, [CREATE] + [invented] * 7), REGISTRY, constrain_copy=False)
+    res = rt.run(HEADER, ASK, Sandbox(NOW).execute)
+    assert res.final.result == "Reminder set: water the plants on 2026-10-01 at 08:00."
+    assert res.turns[-1].rewritten and "tool result" in res.turns[-1].turn.verify
+    honest = Turn(Action.finish("Reminder set: water the plants on 2026-10-01 at 08:00."))
+    res = AgentRuntime(scripted_engine(tiny_tokenizer, [CREATE, honest]), REGISTRY, constrain_copy=False).run(
+        HEADER, ASK, Sandbox(NOW).execute)
+    assert res.final == honest.action and not res.turns[-1].rewritten

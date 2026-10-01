@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arouse AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: chat column + workspace rail; under 860px they become two tabs. */
+  :root {
+    --ground: #f3f4f8; --surface: #ffffff; --ink: #15171d; --muted: #616878; --line: #dfe3ea; --code: #f0f2f7;
+    --accent: #3b5bdb; --accent-ink: #ffffff; --accent-soft: #e8edff;
+    --ok: #17703a; --ok-soft: #e3f4e8; --warn: #8f5400; --warn-soft: #fff2dc; --err: #b42318; --err-soft: #fdeceb;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0e1015; --surface: #161920; --ink: #e8eaf0; --muted: #9aa2b3; --line: #272c37; --code: #1d212a;
+      --accent: #7f97ff; --accent-ink: #0e1015; --accent-soft: #1d2442;
+      --ok: #62d18f; --ok-soft: #10291a; --warn: #f2b45a; --warn-soft: #33250f; --err: #ff8f85; --err-soft: #3a1715;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0e1015; --surface: #161920; --ink: #e8eaf0; --muted: #9aa2b3; --line: #272c37; --code: #1d212a;
+    --accent: #7f97ff; --accent-ink: #0e1015; --accent-soft: #1d2442;
+    --ok: #62d18f; --ok-soft: #10291a; --warn: #f2b45a; --warn-soft: #33250f; --err: #ff8f85; --err-soft: #3a1715;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--ground); color: var(--ink); font: 15px/1.55 var(--body); }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, textarea:focus-visible, label:focus-within, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .app { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+
+  /* top bar */
+  .bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 8px; font: 700 19px/1 var(--display); letter-spacing: -.2px; }
+  .brand svg { width: 22px; height: 22px; color: var(--accent); }
+  .model { font: 12px/1 var(--mono); color: var(--muted); }
+  .pill { font-size: 12.5px; line-height: 1; padding: 6px 10px; border-radius: 999px; background: var(--code); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.busy { background: var(--accent-soft); color: var(--accent); }
+  .pill.err { background: var(--err-soft); color: var(--err); }
+  .spacer { flex: 1; }
+  .ghost { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; }
+  .ghost:hover { border-color: var(--muted); }
+  .tabs { display: none; gap: 4px; }
+  .tabs button { background: transparent; border: 0; border-radius: 8px; padding: 6px 10px; color: var(--muted); }
+  .tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+  .main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 330px; }
+
+  /* chat */
+  .chat { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .scroll { flex: 1; overflow-y: auto; min-height: 0; }
+  .log { max-width: 760px; margin: 0 auto; padding: 24px 16px 12px; display: flex; flex-direction: column; gap: 14px; }
+  .intro { padding: 12px 0 8px; display: flex; flex-direction: column; gap: 14px; }
+  .intro h1 { font: 700 clamp(26px, 4.2vw, 38px)/1.08 var(--display); letter-spacing: -.6px; margin: 0; text-wrap: balance; max-width: 22ch; }
+  .intro p { margin: 0; color: var(--muted); max-width: 62ch; }
+  .load { display: flex; align-items: center; gap: 12px; font: 12.5px/1.3 var(--mono); color: var(--muted); }
+  .meter { flex: 0 1 220px; height: 6px; border-radius: 99px; background: var(--code); overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .load.err { color: var(--err); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13.5px; text-align: left; }
+  .chips button:hover { border-color: var(--accent); color: var(--accent); }
+  .scope { font-size: 13px; }
+
+  .msg { max-width: 86%; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); padding: 9px 14px; border-radius: 16px 16px 4px 16px; white-space: pre-wrap; }
+  .msg.agent { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); padding: 10px 14px; border-radius: 16px 16px 16px 4px; }
+  .msg.agent.ask { border-color: var(--accent); }
+  .msg.agent.fail { border-color: var(--warn); }
+  .who { display: flex; gap: 8px; align-items: center; font-size: 11.5px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); }
+  .kind { padding: 2px 7px; border-radius: 99px; background: var(--ok-soft); color: var(--ok); letter-spacing: .3px; }
+  .ask .kind { background: var(--accent-soft); color: var(--accent); }
+  .fail .kind { background: var(--warn-soft); color: var(--warn); }
+  .answer { margin: 4px 0 0; white-space: pre-wrap; }
+  .thinking { color: var(--muted); margin: 4px 0 0; }
+  .thinking::after { content: ""; display: inline-block; width: 1.2em; text-align: left; animation: dots 1.2s steps(4) infinite; }
+  @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+  @media (prefers-reduced-motion: reduce) { .thinking::after { animation: none; content: "..."; } .meter i { transition: none; } }
+  details.steps { margin-top: 8px; font-size: 13px; }
+  details.steps summary { cursor: pointer; color: var(--muted); }
+  .steplist { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .steplist li { display: grid; gap: 2px; padding: 6px 8px; border-radius: 8px; background: var(--code); border-left: 3px solid var(--line); min-width: 0; }
+  .steplist li.ok { border-left-color: var(--ok); }
+  .steplist li.bad { border-left-color: var(--err); }
+  .steplist code { font: 500 12.5px/1.4 var(--mono); }
+  .steplist .args { font: 12px/1.45 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+  .steplist .res { font-size: 12.5px; }
+  .steplist .bad .res, .steplist li.bad .res { color: var(--err); }
+  .msg.alarm { align-self: center; display: flex; align-items: center; gap: 10px; background: var(--warn-soft); color: var(--warn); padding: 8px 14px; border-radius: 12px; font-size: 14px; }
+  .msg.alarm svg { width: 18px; height: 18px; flex: none; }
+  .msg.error { align-self: center; background: var(--err-soft); color: var(--err); padding: 8px 14px; border-radius: 12px; font-size: 13.5px; }
+
+  .composer { border-top: 1px solid var(--line); background: var(--surface); padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .composer form { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end; }
+  #input { flex: 1; min-width: 0; resize: none; min-height: 44px; max-height: 160px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--ground); }
+  #input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .send { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px; padding: 0 18px; height: 44px; font-weight: 600; }
+  .send:disabled { opacity: .45; cursor: default; }
+  .fine { max-width: 760px; margin: 6px auto 0; font-size: 11.5px; color: var(--muted); text-align: center; }
+
+  /* workspace */
+  .space { border-left: 1px solid var(--line); background: var(--surface); overflow-y: auto; min-height: 0; padding: 18px 16px 24px; display: flex; flex-direction: column; gap: 22px; }
+  .space h2 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font: 600 15px/1.2 var(--display); letter-spacing: .1px; }
+  .space h2 .n { font: 12px/1 var(--mono); color: var(--muted); }
+  .items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+  .item .t { overflow-wrap: anywhere; }
+  .item .meta { grid-column: 1; display: flex; flex-wrap: wrap; gap: 4px 8px; font: 12px/1.4 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tag { padding: 0 6px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-family: var(--body); }
+  .tag.sample { background: var(--code); color: var(--muted); }
+  .x { grid-row: 1 / span 2; grid-column: 2; width: 26px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 16px; line-height: 1; }
+  .x:hover { background: var(--err-soft); color: var(--err); }
+  .x:disabled { visibility: hidden; }
+  .none { color: var(--muted); font-size: 13px; margin: 0; }
+  .upload { display: inline-flex; margin-top: 8px; font-size: 13px; color: var(--accent); cursor: pointer; border: 1px dashed var(--line); border-radius: 10px; padding: 6px 10px; }
+  .upload input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .danger { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .danger button { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; font-size: 13px; }
+  .danger .yes { border-color: var(--err); color: var(--err); }
+  .about { font-size: 12.5px; color: var(--muted); margin: 0; }
+  .about code { font: 11.5px var(--mono); }
+
+  .toasts { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 10; width: min(420px, calc(100% - 32px)); }
+  .toast { display: flex; gap: 10px; align-items: center; background: var(--surface); color: var(--ink); border: 1px solid var(--warn); border-radius: 12px; padding: 10px 14px; box-shadow: 0 6px 24px rgb(0 0 0 / .15); }
+  .toast svg { width: 18px; height: 18px; color: var(--warn); flex: none; }
+
+  @media (max-width: 860px) {
+    .main { grid-template-columns: minmax(0, 1fr); }
+    .tabs { display: flex; }
+    .model { display: none; }
+    .space { border-left: 0; }
+    .main[data-tab="chat"] .space, .main[data-tab="space"] .chat { display: none; }
+    .msg { max-width: 92%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2 3 21h4.2l1.6-3.6h6.4l1.6 3.6H21L12 2Zm-1.8 12.2L12 10l1.8 4.2h-3.6Z" fill="currentColor"/></svg>
+      <span>Arouse</span>
+    </div>
+    <span class="model" id="model">arouse-agent-s</span>
+    <span class="pill" id="status">Loading model</span>
+    <span class="spacer"></span>
+    <nav class="tabs" role="tablist" aria-label="View">
+      <button id="tab-chat" role="tab" aria-selected="true">Chat</button>
+      <button id="tab-space" role="tab" aria-selected="false">Workspace</button>
+    </nav>
+    <button class="ghost" id="new-chat" type="button">New chat</button>
+  </header>
+
+  <div class="main" id="main" data-tab="chat">
+    <section class="chat" aria-label="Chat">
+      <div class="scroll" id="scroll">
+        <div class="log" id="log">
+          <div class="intro" id="intro">
+            <h1>Reminders, notes and files, handled by a model running on this page.</h1>
+            <p>Arouse is a small language model trained from scratch for one job: turning what you ask into tool calls, then checking the result. It runs in your browser, so nothing you type leaves this device.</p>
+            <div class="load" id="load"><div class="meter"><i id="meter"></i></div><span id="load-text">Downloading model weights</span></div>
+            <div class="chips" id="chips">
+              <button type="button">Remind me tomorrow at 8 AM to check sales.</button>
+              <button type="button">Every Monday at 9 AM remind me to pay the staff.</button>
+              <button type="button">Remind me in 20 minutes to call the vet.</button>
+              <button type="button">Remind me on Friday to order feed.</button>
+              <button type="button">What reminders do I have?</button>
+              <button type="button">Note that the feed delivery is late.</button>
+              <button type="button">How many lines are in sales.csv?</button>
+            </div>
+            <p class="scope">It handles one-time, relative and repeating reminders, cancelling them, notes, and reading the files in your workspace. It does not answer general questions, and it can misread unusual phrasing.</p>
+          </div>
+        </div>
+      </div>
+      <div class="composer">
+        <form id="composer">
+          <label for="input" hidden>Message</label>
+          <textarea id="input" rows="1" placeholder="Ask Arouse to set a reminder, save a note or read a file" autocomplete="off"></textarea>
+          <button class="send" id="send" type="submit" disabled>Send</button>
+        </form>
+        <p class="fine">Runs on your device. Reminders fire while this page is open.</p>
+      </div>
+    </section>
+
+    <aside class="space" id="space" aria-label="Workspace">
+      <section>
+        <h2>Reminders <span class="n" id="n-rem"></span></h2>
+        <ul class="items" id="reminders"></ul>
+      </section>
+      <section>
+        <h2>Notes <span class="n" id="n-notes"></span></h2>
+        <ul class="items" id="notes"></ul>
+      </section>
+      <section>
+        <h2>Files <span class="n" id="n-files"></span></h2>
+        <ul class="items" id="files"></ul>
+        <label class="upload" for="upload">Add a text or CSV file<input type="file" id="upload" multiple accept=".csv,.txt,.md,.json,.log,.tsv,text/*"></label>
+      </section>
+      <div class="danger" id="danger"><button type="button" id="reset">Clear workspace</button></div>
+      <p class="about" id="about">Model files: <code>model/</code>. Weights are 16-bit floats exported from the trained PyTorch checkpoint; the JavaScript runtime is tested against the Python one.</p>
+    </aside>
+  </div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</div>
+
+<script src="arouse.js"></script>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const KEY = "arouse.web.v1";
+  const BELL = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.4A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.6L18 12.6V9a6 6 0 0 0-6-6Zm-2.4 15.5a2.5 2.5 0 0 0 4.8 0h-4.8Z" fill="currentColor"/></svg>';
+  const SAMPLE_FILES = {
+    "sales.csv": "date,item,qty,amount\n2026-09-28,milk 1L,140,7700\n2026-09-28,curd 500g,36,1440\n2026-09-29,milk 1L,152,8360\n2026-09-29,paneer 200g,18,1620\n2026-09-30,milk 1L,147,8085\n2026-09-30,ghee 500g,6,2700\n",
+    "milk_records.csv": "date,cow,litres\n2026-09-29,Gauri,11.5\n2026-09-29,Kamdhenu,9.0\n2026-09-29,Lakshmi,10.2\n2026-09-30,Gauri,12.0\n2026-09-30,Kamdhenu,8.5\n",
+    "staff.csv": "name,role,shift\nRavi,milker,morning\nSunita,delivery,morning\nArjun,accounts,day\n",
+  };
+  const SAMPLE_NAMES = new Set(Object.keys(SAMPLE_FILES));
+  const MAX_FILE = 200 * 1024;
+  const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const DAYS = { MO: "Mon", TU: "Tue", WE: "Wed", TH: "Thu", FR: "Fri", SA: "Sat", SU: "Sun" };
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const fresh = () => ({ feed: [], events: [], state: { reminders: [], notes: [], files: { ...SAMPLE_FILES }, nextId: 1, nextNote: 1 } });
+  let data = (() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY));
+      if (s && s.state && Array.isArray(s.feed) && Array.isArray(s.events)) return s;
+    } catch (e) { /* storage unavailable */ }
+    return fresh();
+  })();
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { /* not persisted */ } };
+
+  let ready = false, busy = false, runId = 0, pending = null, info = null;
+
+  // ------------------------------------------------------------ formatting
+  function parseDT(s) {
+    const [d, t] = s.split("T"), [y, m, dd] = d.split("-").map(Number), [h, mi] = t.split(":").map(Number);
+    return new Date(y, m - 1, dd, h, mi);
+  }
+  function whenText(s) {
+    const d = parseDT(s), now = new Date(), hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const mins = Math.round((d - now) / 60000);
+    const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
+    if (mins >= 0 && mins < 60) return `in ${Math.max(mins, 1)} min · ${hm}`;
+    if (days === 0) return `Today ${hm}`;
+    if (days === 1) return `Tomorrow ${hm}`;
+    if (days > 1 && days < 7) return `${DOW[d.getDay()]} ${hm}`;
+    return `${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]} ${hm}`;
+  }
+  const ordinal = (n) => n + (n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th");
+  function repeatText(r) {
+    if (!r) return "";
+    const n = r.interval || 1;
+    if (r.freq === "daily") return n === 1 ? "Every day" : `Every ${n} days`;
+    if (r.freq === "weekly") return "Weekly · " + (r.by_day || []).map((c) => DAYS[c] || c).join(", ");
+    if (r.freq === "monthly") return "Monthly · " + (r.by_month_day || []).map(ordinal).join(", ");
+    return r.freq;
+  }
+  function argText(args) {
+    const parts = Object.entries(args).map(([k, v]) => k === "repeat" ? `repeat: ${repeatText(v)}` : `${k}: ${JSON.stringify(v)}`);
+    return parts.join("  ·  ") || "no arguments";
+  }
+  function resultText(ev) {
+    const c = ev.content || {};
+    if (ev.type === "tool_error") return c.error || "failed";
+    if ("next_run" in c) return `Created ${c.task_id}, next run ${whenText(c.next_run)}`;
+    if ("count" in c) return `${c.count} reminder${c.count === 1 ? "" : "s"}`;
+    if ("deleted" in c) return `Deleted ${c.deleted} (${c.task})`;
+    if ("note_id" in c) return `Saved as ${c.note_id}`;
+    if ("lines" in c) return `${c.path}: ${c.lines} lines`;
+    if ("files" in c) return `${c.files.length} file${c.files.length === 1 ? "" : "s"}: ${c.files.join(", ")}`;
+    return "OK";
+  }
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+
+  // ------------------------------------------------------------ chat feed
+  const log = $("log"), scroll = $("scroll");
+  const KIND = { finish: "Done", ask_user: "Question", fail: "Couldn't finish" };
+
+  function renderItem(item) {
+    if (item.kind === "user") return el("div", "msg user", item.text);
+    if (item.kind === "alarm") {
+      const d = el("div", "msg alarm"); d.innerHTML = BELL;
+      const t = el("div"); t.append(el("b", "", "Reminder: "), document.createTextNode(item.task + " "), el("span", "", `(${item.time})`));
+      d.append(t); return d;
+    }
+    if (item.kind === "error") return el("div", "msg error", item.text);
+    const f = item.final, d = el("article", "msg agent" + (f ? (f.type === "ask_user" ? " ask" : f.type === "fail" ? " fail" : "") : ""));
+    const who = el("div", "who"); who.append(el("span", "", "Arouse"));
+    if (f) who.append(el("span", "kind", KIND[f.type] || f.type));
+    d.append(who);
+    d.append(f ? el("p", "answer", f.text) : el("p", "thinking", item.steps.length ? "Working" : "Thinking"));
+    if (item.steps.length) {
+      const det = el("details", "steps"); if (!f) det.open = true;
+      const secs = item.ms ? ` · ${(item.ms / 1000).toFixed(1)} s` : "";
+      det.append(el("summary", "", `${item.steps.length} tool call${item.steps.length === 1 ? "" : "s"}${secs}`));
+      const ol = el("ol", "steplist");
+      for (const s of item.steps) {
+        const li = el("li", s.result === null ? "" : s.ok ? "ok" : "bad");
+        li.append(el("code", "", s.tool), el("span", "args", argText(s.args)));
+        if (s.result !== null) li.append(el("span", "res", s.result));
+        ol.append(li);
+      }
+      det.append(ol); d.append(det);
+    } else if (f && item.ms) {
+      const meta = el("details", "steps"); meta.append(el("summary", "", `No tool needed · ${(item.ms / 1000).toFixed(1)} s`)); d.append(meta);
+    }
+    return d;
+  }
+  const nodes = new Map();
+  function renderFeed() {
+    for (const n of nodes.values()) n.remove();
+    nodes.clear();
+    $("intro").hidden = data.feed.length > 0 && ready;
+    for (const item of data.feed) { const n = renderItem(item); nodes.set(item, n); log.append(n); }
+    toBottom();
+  }
+  function rerender(item) {
+    const old = nodes.get(item), n = renderItem(item);
+    if (old) old.replaceWith(n); else log.append(n);
+    nodes.set(item, n); toBottom();
+  }
+  function push(item) { data.feed.push(item); $("intro").hidden = true; rerender(item); }
+  const toBottom = () => requestAnimationFrame(() => { scroll.scrollTop = scroll.scrollHeight; });
+
+  // ------------------------------------------------------------ workspace
+  function renderSpace() {
+    const st = data.state, rem = [...st.reminders].sort((a, b) => a.next_run.localeCompare(b.next_run));
+    const R = $("reminders"); R.replaceChildren();
+    $("n-rem").textContent = rem.length ? String(rem.length) : "";
+    if (!rem.length) R.append(el("p", "none", "No reminders yet. Ask Arouse to set one."));
+    for (const r of rem) {
+      const li = el("li", "item"); li.append(el("span", "t", r.task));
+      const x = el("button", "x", "×"); x.type = "button"; x.disabled = busy; x.setAttribute("aria-label", `Delete reminder ${r.task}`);
+      x.onclick = () => { if (busy) return; st.reminders = st.reminders.filter((y) => y.task_id !== r.task_id); save(); renderSpace(); };
+      li.append(x);
+      const meta = el("span", "meta"); meta.append(el("span", "", whenText(r.next_run)));
+      if (r.repeat) meta.append(el("span", "tag", repeatText(r.repeat)));
+      meta.append(el("span", "", r.task_id)); li.append(meta); R.append(li);
+    }
+    const N = $("notes"); N.replaceChildren();
+    $("n-notes").textContent = st.notes.length ? String(st.notes.length) : "";
+    if (!st.notes.length) N.append(el("p", "none", "No notes yet."));
+    for (const n of [...st.notes].reverse()) {
+      const li = el("li", "item"); li.append(el("span", "t", n.text));
+      const x = el("button", "x", "×"); x.type = "button"; x.disabled = busy; x.setAttribute("aria-label", "Delete note");
+      x.onclick = () => { if (busy) return; st.notes = st.notes.filter((y) => y.note_id !== n.note_id); save(); renderSpace(); };
+      li.append(x, el("span", "meta", n.note_id)); N.append(li);
+    }
+    const F = $("files"); F.replaceChildren();
+    const names = Object.keys(st.files).sort();
+    $("n-files").textContent = names.length ? String(names.length) : "";
+    if (!names.length) F.append(el("p", "none", "No files. Add one below."));
+    for (const name of names) {
+      const li = el("li", "item"); li.append(el("span", "t", name));
+      const x = el("button", "x", "×"); x.type = "button"; x.disabled = busy; x.setAttribute("aria-label", `Remove ${name}`);
+      x.onclick = () => { if (busy) return; delete st.files[name]; save(); renderSpace(); };
+      li.append(x);
+      const meta = el("span", "meta");
+      const lines = st.files[name].split(/\r\n|\r|\n/); if (lines[lines.length - 1] === "") lines.pop();
+      meta.append(el("span", "", `${lines.length} lines`));
+      if (SAMPLE_NAMES.has(name) && st.files[name] === SAMPLE_FILES[name]) meta.append(el("span", "tag sample", "sample"));
+      li.append(meta); F.append(li);
+    }
+  }
+
+  $("upload").addEventListener("change", (e) => {
+    for (const file of e.target.files) {
+      if (file.size > MAX_FILE) { toast(`${file.name} is larger than 200 KB, so it was not added.`); continue; }
+      const name = file.name.replace(/[^\w.\-]+/g, "_");
+      const reader = new FileReader();
+      reader.onload = () => { data.state.files[name] = String(reader.result); save(); renderSpace(); toast(`Added ${name}.`); };
+      reader.readAsText(file);
+    }
+    e.target.value = "";
+  });
+
+  function askReset() {
+    const box = $("danger"); box.replaceChildren(el("span", "", "Delete all reminders, notes and added files?"));
+    const yes = el("button", "yes", "Clear"), no = el("button", "", "Cancel");
+    yes.type = no.type = "button";
+    const restore = () => { const b = el("button", "", "Clear workspace"); b.type = "button"; b.id = "reset"; b.onclick = askReset; box.replaceChildren(b); };
+    yes.onclick = () => { if (!busy) { data.state = fresh().state; save(); renderSpace(); } restore(); };
+    no.onclick = restore; box.append(yes, no); no.focus();
+  }
+  $("reset").onclick = askReset;
+
+  // ------------------------------------------------------------ reminders firing
+  function toast(text, bell) {
+    const t = el("div", "toast"); if (bell) t.innerHTML = BELL;
+    t.append(el("span", "", text)); $("toasts").append(t);
+    setTimeout(() => t.remove(), bell ? 12000 : 4000);
+  }
+  function checkDue() {
+    if (busy) return;
+    const sb = new Arouse.Sandbox(data.state), fired = sb.due(new Date());
+    if (!fired.length) return;
+    data.state = { ...sb.state(), files: data.state.files };
+    for (const r of fired) {
+      const time = r.next_run.slice(11);
+      push({ kind: "alarm", task: r.task, time });
+      toast(`Reminder: ${r.task}`, true);
+    }
+    const base = document.title.replace(/^\(\d+\) /, "");
+    document.title = `(${fired.length}) ${base}`;
+    setTimeout(() => { document.title = base; }, 15000);
+    save(); renderSpace();
+  }
+  setInterval(checkDue, 15000);
+  setInterval(() => { if (!busy) renderSpace(); }, 60000);
+
+  // ------------------------------------------------------------ model
+  const status = (text, cls) => { const s = $("status"); s.textContent = text; s.className = "pill" + (cls ? " " + cls : ""); };
+  const worker = new Worker("worker.js");
+  worker.onmessage = (e) => {
+    const m = e.data;
+    if (m.type === "progress") {
+      $("meter").style.width = `${Math.round(m.p * 100)}%`;
+      $("load-text").textContent = `Downloading model weights · ${Math.round(m.p * 100)}%`;
+      status(`Loading ${Math.round(m.p * 100)}%`);
+    } else if (m.type === "ready") {
+      ready = true; info = m.info;
+      $("load").hidden = true;
+      $("model").textContent = `${info.name} · ${(info.params / 1e6).toFixed(1)}M params`;
+      $("about").textContent = `${info.name}: ${info.params.toLocaleString()} parameters, context ${info.context} tokens. ${info.notes} The weights are stored as 16-bit floats and run in a Web Worker; the JavaScript runtime is tested against the Python one.`;
+      status("Ready", "ok"); $("send").disabled = !$("input").value.trim();
+      $("intro").hidden = data.feed.length > 0;
+      checkDue();
+    } else if (m.type === "step" && pending && m.id === runId) {
+      const ev = m.event;
+      if (ev.type === "arouse" && ev.turn.action.type === "tool_call") pending.steps.push({ tool: ev.turn.action.tool, args: ev.turn.action.arguments, result: null, ok: false });
+      else if (ev.type === "tool_result" || ev.type === "tool_error") {
+        const s = pending.steps[pending.steps.length - 1];
+        if (s) { s.result = resultText(ev); s.ok = ev.type === "tool_result"; }
+      }
+      rerender(pending);
+    } else if (m.type === "done" && pending && m.id === runId) {
+      data.events.push(...m.events);
+      data.state = m.state;
+      const a = m.final;
+      pending.final = { type: a.type, text: a.result || a.question || a.error };
+      pending.ms = m.ms;
+      finishRun();
+    } else if (m.type === "error") {
+      if (!ready) {
+        $("load").classList.add("err");
+        $("load-text").textContent = `Couldn't load the model (${m.message}). Reload the page to try again.`;
+        status("Not loaded", "err");
+        return;
+      }
+      if (pending && m.id === runId) {
+        data.events.pop(); // the request was not processed
+        data.feed.splice(data.feed.indexOf(pending), 1); nodes.get(pending)?.remove();
+        push({ kind: "error", text: /too long|tokens/.test(m.message)
+          ? "That message is too long for Arouse. Try a shorter one."
+          : `Something went wrong while running the model: ${m.message}` });
+        finishRun();
+      }
+    }
+  };
+  worker.onerror = (e) => { status("Error", "err"); $("load-text").textContent = `The model worker failed: ${e.message || "unknown error"}`; };
+  worker.postMessage({ type: "load", base: "model/" });
+
+  function finishRun() {
+    const done = pending; pending = null; busy = false;
+    if (done && data.feed.includes(done)) rerender(done);
+    // keep storage bounded: the model only sees recent exchanges anyway
+    if (data.events.length > 80) {
+      let i = data.events.length - 60;
+      while (i < data.events.length && data.events[i].type !== "user") i++;
+      data.events = data.events.slice(i);
+    }
+    if (data.feed.length > 200) data.feed = data.feed.slice(-160);
+    save(); renderSpace();
+    status("Ready", "ok");
+    $("send").disabled = !$("input").value.trim();
+    checkDue();
+  }
+
+  function send(text) {
+    text = text.trim();
+    if (!text || busy || !ready) return;
+    checkDue();
+    busy = true; runId += 1;
+    push({ kind: "user", text });
+    data.events.push({ type: "user", content: text });
+    pending = { kind: "agent", steps: [], final: null };
+    push(pending);
+    status("Thinking", "busy"); $("send").disabled = true; renderSpace();
+    worker.postMessage({ type: "run", id: runId, events: data.events, state: data.state, timezone: "local" });
+  }
+
+  // ------------------------------------------------------------ composer + controls
+  const input = $("input");
+  const grow = () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 160) + "px"; };
+  input.addEventListener("input", () => { grow(); $("send").disabled = !ready || busy || !input.value.trim(); });
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("composer").requestSubmit(); } });
+  $("composer").addEventListener("submit", (e) => { e.preventDefault(); if (!ready || busy) return; const t = input.value; input.value = ""; grow(); send(t); });
+  $("chips").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (ready && !busy) send(b.textContent); else { input.value = b.textContent; grow(); input.focus(); }
+  });
+  $("new-chat").addEventListener("click", () => {
+    if (busy) return;
+    data.feed = []; data.events = []; save(); renderFeed(); $("intro").hidden = false; input.focus();
+  });
+  for (const [id, tab] of [["tab-chat", "chat"], ["tab-space", "space"]]) {
+    $(id).addEventListener("click", () => {
+      $("main").dataset.tab = tab;
+      $("tab-chat").setAttribute("aria-selected", String(tab === "chat"));
+      $("tab-space").setAttribute("aria-selected", String(tab === "space"));
+      if (tab === "space") renderSpace();
+    });
+  }
+
+  renderFeed(); renderSpace();
+})();
+</script>
+</body>
+</html>

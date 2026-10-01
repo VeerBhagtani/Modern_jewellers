@@ -7,7 +7,8 @@ Defence in depth against unreliable output:
   3. copy-constrained decoding + grounding: free-text arguments (reminder task, note
      text, file path) can only be copied from the conversation; final answers may only
      use Arouse's response vocabulary plus words from the conversation / tool results;
-     anything ungrounded is resampled (greedy result kept if no sample is grounded)
+     anything ungrounded is resampled (greedy result kept if no sample is grounded,
+     except a final answer, which is then written from the last tool result)
   4. completion guard: `finish` right after a failed tool call (with no success since)
      is converted to `fail`, so a false "Done." never reaches the user
   5. step limit: at most `max_tool_calls` tool calls per user message
@@ -19,6 +20,7 @@ import dataclasses
 from collections.abc import Callable
 from typing import Any
 
+from arouse.agent.answers import answer_from_result
 from arouse.agent.constraints import CopyConstraint
 from arouse.agent.episode import Header, encode_prompt, turn_event
 from arouse.agent.grounding import answer_issue, grounding_issue
@@ -37,6 +39,7 @@ class TurnResult:
     valid: bool  # False = model never produced a valid turn (runtime substituted a fail)
     guarded: bool = False  # completion guard rewrote a false finish
     grounded: bool = True  # False = kept an ungrounded tool call (no grounded alternative found)
+    rewritten: bool = False  # True = the answer failed the answer guard and was written from the tool result
 
 
 @dataclasses.dataclass
@@ -126,7 +129,12 @@ class AgentRuntime:
             if first_valid is None:
                 first_valid = dataclasses.replace(result, grounded=False)
         if first_valid is not None:
-            return self._guard(dataclasses.replace(first_valid, attempts=attempt), events)
+            r = dataclasses.replace(first_valid, attempts=attempt)
+            a = r.turn.action
+            if a.type == "finish" and answer_issue(a, events) is not None and (fixed := answer_from_result(events)):
+                turn = Turn(Action.finish(fixed), plan=r.turn.plan, verify="runtime: answer written from the tool result")
+                r = dataclasses.replace(r, turn=turn, rewritten=True)
+            return self._guard(r, events)
         fallback = Turn(Action.fail("Sorry, I couldn't work out a valid next step for that request."),
                         verify="runtime: the model did not produce a valid action")
         return TurnResult(fallback, attempt, raw, False)

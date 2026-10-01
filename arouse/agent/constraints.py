@@ -134,27 +134,33 @@ class CopyConstraint:
         if field == "date":
             return [d[len(partial):] for d in self.dates if d.startswith(partial) and d != partial]
         out = []
+        word = (lambda ch: ch.isalnum() or ch in "_-./\\") if field == "path" else str.isalnum
         for src in self.sources[field]:
+            whole = field == "path" and src in self.listed  # a listed file name is copied whole
             if not partial:
-                starts = [i for i, ch in enumerate(src) if ch.isalnum() and (i == 0 or not src[i - 1].isalnum())]
+                starts = [i for i, ch in enumerate(src) if ch.isalnum() and (i == 0 or not word(src[i - 1]))]
             else:
                 starts = []
                 i = src.find(partial)
                 while i != -1:
-                    if i == 0 or not src[i - 1].isalnum():
+                    if i == 0 or not word(src[i - 1]):
                         starts.append(i)
                     i = src.find(partial, i + 1)
+            if whole:
+                starts = [i for i in starts if i == 0]
             if field == "task" and not partial:
                 starts = [i for i in starts if not src[i].isdigit()]  # tasks start with a word, not "40 PM"
             for i in starts:
                 rest = src[i + len(partial):]
-                pats = {"task": (_STOP_ALL, _STOP_TASK), "text": (_STOP_ALL,), "path": (_STOP_PATH,)}[field]
+                pats = {"task": (_STOP_ALL, _STOP_TASK), "text": (_STOP_ALL,), "path": () if whole else (_STOP_PATH,)}[field]
                 stops = [m.start() for p in pats if (m := p.search(src[i:]))]  # measured from the value's start
                 if stops:
                     cut = min(stops) - len(partial)
                     if cut <= 0:
                         continue
                     rest = rest[:cut]
+                if field == "path" and not self.complete(field, partial + rest):
+                    continue  # only spans that are whole file names ("vet_visits.txt", not "the")
                 out.append(rest)
         return out
 
