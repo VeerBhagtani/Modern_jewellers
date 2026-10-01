@@ -89,3 +89,15 @@ def test_prompt_truncation_keeps_latest_request(tiny_tokenizer):
     assert len(ids) <= 470 and "latest" in tiny_tokenizer.decode(ids) and "number 0 " not in tiny_tokenizer.decode(ids)
     with pytest.raises(ProtocolError, match="tokens"):
         rt._fit(HEADER, [{"type": "user", "content": "word " * 600}])
+
+
+def test_runtime_reports_full_context_instead_of_crashing(tiny_tokenizer):
+    lst = Turn(Action.tool_call("scheduler.list", {}))
+    eng = scripted_engine(tiny_tokenizer, [lst] * 10)
+    eng.model.config = eng.model.config.replace(context_length=600)
+    rt = AgentRuntime(eng, REGISTRY, max_new_tokens=50)
+    sb = Sandbox(NOW)
+    for i in range(12):  # a long list result fills the context mid-run
+        sb.execute("scheduler.create", {"task": f"task number {i} with a fairly long description", "in_minutes": 10 + i})
+    res = rt.run(HEADER, [{"type": "user", "content": "What reminders do I have?"}], sb.execute)
+    assert res.final.type == "fail" and "too long" in res.final.error

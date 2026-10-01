@@ -146,7 +146,13 @@ def eval_end_to_end(runtime: AgentRuntime, episodes: list[dict[str, Any]], limit
     for ep in episodes[:limit]:
         prefix, gold_final, gold_state = gold_first_request(ep)
         sb = episode_sandbox(ep)
-        res = runtime.run(episode_header(ep), prefix, sb.execute)
+        try:
+            res = runtime.run(episode_header(ep), prefix, sb.execute)
+        except Exception as e:  # a crash is a failed episode, never a crashed benchmark
+            n += 1
+            failures.append({"episode": ep["id"], "user": prefix[-1]["content"], "error": repr(e)[:200]})
+            by_cat[ep["category"].split("+")[0]][1] += 1
+            continue
         t = res.final.type == gold_final.type
         s = sb.snapshot() == gold_state
         n += 1

@@ -78,6 +78,8 @@ class AgentRuntime:
         self.grounding_samples = grounding_samples
         self.constrain_copy = constrain_copy
 
+    MIN_RESERVE = 48  # generation room kept even when older exchanges cannot be dropped
+
     def _fit(self, header: Header, events: list[dict[str, Any]]) -> list[int]:
         """Prompt ids; drops the oldest whole user exchanges if the context is too long."""
         tok = self.engine.tokenizer
@@ -89,6 +91,8 @@ class AgentRuntime:
                 return ids
             nxt = next((i for i, e in enumerate(evs) if i > 0 and e["type"] == "user"), None)
             if nxt is None:
+                if len(ids) <= self.engine.context_length - self.MIN_RESERVE:
+                    return ids  # current request only: use the remaining context for the reply
                 raise ProtocolError(f"conversation needs {len(ids)} tokens; the model allows {budget}")
             evs = evs[nxt:]
 
@@ -142,7 +146,13 @@ class AgentRuntime:
         turns: list[TurnResult] = []
         calls = 0
         while True:
-            r = self.next_turn(header, history)
+            try:
+                r = self.next_turn(header, history)
+            except ProtocolError:
+                if not new and not turns:
+                    raise  # nothing happened yet: the request itself does not fit (caller decides)
+                r = TurnResult(Turn(Action.fail("This conversation is too long for me to continue. Please start a new chat."),
+                                    verify="runtime: context full"), 0, "", True)
             turns.append(r)
             ev = turn_event(r.turn)
             history.append(ev)
